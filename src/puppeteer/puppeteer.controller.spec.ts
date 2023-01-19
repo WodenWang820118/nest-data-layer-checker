@@ -26,7 +26,7 @@ describe('PuppeteerController', () => {
     expect(controller).toBeDefined();
   });
 
-  it.each([{ url: 'https://www.google.com' }])(
+  it.each([{ url: 'https://www.104.com.tw/jobs/main/' }])(
     'should take an url and return the dataLayer',
     async ({ url }) => {
       // actual
@@ -35,12 +35,10 @@ describe('PuppeteerController', () => {
       expect(service.getBrowser).toHaveBeenCalled();
       expect(service.getBrowser).toHaveBeenCalledTimes(1);
       expect(service.getPage).toHaveBeenCalled();
-      // expect(service.getPage).toHaveBeenCalledTimes(1);
       expect(service.goToPage).toHaveBeenCalled();
-      // expect(service.goToPage).toHaveBeenCalledTimes(1);
       expect(service.getDataLayer).toHaveBeenCalled();
-      // expect(service.getDataLayer).toHaveBeenCalledTimes(1);
-      expect(actual).toEqual([]);
+      expect(service.closePage).toHaveBeenCalled();
+      expect(actual.length).toBeGreaterThan(0);
     },
   );
 });

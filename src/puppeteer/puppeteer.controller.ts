@@ -1,14 +1,13 @@
+import { rootDir } from './puppeteer.config';
+import { readFileSync } from 'fs';
 import { Body, Controller, Get, Param, Query } from '@nestjs/common';
 import { PuppeteerService } from './puppeteer.service';
-import { query } from 'express';
 @Controller('puppeteer')
 export class PuppeteerController {
-  constructor(private readonly puppeteerService: PuppeteerService) {
-    this.initPuppeteerService();
-  }
+  constructor(private readonly puppeteerService: PuppeteerService) {}
 
-  async initPuppeteerService() {
-    await this.puppeteerService.initBrowser();
+  async initPuppeteerService(settings?: any) {
+    await this.puppeteerService.initBrowser(settings);
     await this.puppeteerService.initPage();
   }
 
@@ -19,6 +18,7 @@ export class PuppeteerController {
 
   @Get('/data-layer')
   async getDataLayer(@Query('url') url: string) {
+    this.initPuppeteerService();
     // console.log('url', url);
     const broswer = this.puppeteerService.getBrowser();
     // console.log('browser', broswer);
@@ -27,12 +27,25 @@ export class PuppeteerController {
       // console.log('page', page);
       if (page) {
         await this.puppeteerService.goToPage(url);
-        // TODO: perform operations on the page to the target data layer
         const result = await this.puppeteerService.getDataLayer();
-        console.log('result', result);
-        await this.puppeteerService.closeBrowser();
+        // console.log('result', result);
+        await this.puppeteerService.closePage();
         return result;
       }
+    }
+  }
+
+  @Get('/action/:name')
+  async performActionAndGetDataLayer(@Param('name') name: string) {
+    console.log('action', name);
+    const operation = this.puppeteerService.getOperationJson(name);
+    if (operation) {
+      await this.initPuppeteerService(operation.steps[0]);
+      await this.puppeteerService.performOperation(operation);
+      const result = await this.puppeteerService.getDataLayer();
+      console.dir('result', result);
+      await this.puppeteerService.closePage();
+      return result;
     }
   }
 }

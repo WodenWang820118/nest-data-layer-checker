@@ -9,8 +9,14 @@ export const mockService = {
   setPage: jest.fn(),
   getPage: jest.fn().mockReturnValue({}),
   goToPage: jest.fn().mockImplementation(() => mockService.getPage()),
-  getDataLayer: jest.fn().mockReturnValue([]),
+  getDataLayer: jest.fn().mockReturnValue(['dom.js']),
   closeBrowser: jest.fn(),
+  closePage: jest.fn(),
+  getOperationJson: jest.fn().mockReturnValue({}),
+  performOperation: jest
+    .fn()
+    .mockImplementation(() => mockService.clickElement()),
+  clickElement: jest.fn(),
 };
 
 describe('PuppeteerService', () => {
@@ -67,5 +73,28 @@ describe('PuppeteerService', () => {
     const dataLayer = await service.getDataLayer();
     // assert
     expect(dataLayer).toBeDefined();
+  });
+
+  it('should load specific JSON recording', async () => {
+    // actual
+    const operation = service.getOperationJson('eeListClick');
+    // assert
+    expect(operation).toBeInstanceOf(Object);
+  });
+
+  it('should perform operation according to the JSON recording', async () => {
+    // arrange
+    const url = 'https://www.google.com';
+    // actual
+    await service.goToPage(url);
+    const operation = service.getOperationJson('eeListClick');
+    await service.performOperation(operation);
+    // assert
+    expect(operation).toBeInstanceOf(Object);
+    expect(service.initBrowser).toHaveBeenCalled();
+    expect(service.initPage).toHaveBeenCalled();
+    expect(service.getPage).toHaveBeenCalled();
+    expect(service.goToPage).toHaveBeenCalled();
+    expect(service.clickElement).toHaveBeenCalled();
   });
 });
