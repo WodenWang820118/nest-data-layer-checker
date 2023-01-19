@@ -20,6 +20,7 @@ describe('PuppeteerController', () => {
 
     controller = module.get<PuppeteerController>(PuppeteerController);
     service = module.get<PuppeteerService>(PuppeteerService);
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -30,8 +31,14 @@ describe('PuppeteerController', () => {
     'should take an url and return the dataLayer',
     async ({ url }) => {
       // actual
+      const mockInitPuppeteerService = jest.spyOn(
+        controller,
+        'initPuppeteerService',
+      );
+      // always init Puppeteer on the controller side
       const actual = await controller.getDataLayer(url);
       // assert
+      expect(mockInitPuppeteerService).toHaveBeenCalled();
       expect(service.getBrowser).toHaveBeenCalled();
       expect(service.getBrowser).toHaveBeenCalledTimes(1);
       expect(service.getPage).toHaveBeenCalled();
@@ -41,4 +48,42 @@ describe('PuppeteerController', () => {
       expect(actual.length).toBeGreaterThan(0);
     },
   );
+
+  it('should perform operation according to the JSON recording and log dataLayer', async () => {
+    // arrange
+    const operation = service.getOperationJson('eeListClick');
+    // actual
+    // always init Puppeteer on the controller side
+    const mockInitPuppeteerService = jest.spyOn(
+      controller,
+      'initPuppeteerService',
+    );
+    const actual = await controller.performActionAndGetDataLayer(operation);
+    // assert
+    expect(mockInitPuppeteerService).toHaveBeenCalled();
+    expect(service.performOperation).toHaveBeenCalled();
+    expect(service.getDataLayer).toHaveBeenCalled();
+    expect(service.closePage).toHaveBeenCalled();
+    expect(actual.length).toBeGreaterThan(0);
+  });
+
+  it('should get GTM ids', async () => {
+    // arrange
+    const url = 'https://www.104.com.tw/jobs/main/';
+    // actual
+    // assert
+    // always init Puppeteer on the controller side
+    const mockInitPuppeteerService = jest.spyOn(
+      controller,
+      'initPuppeteerService',
+    );
+    const actual = await controller.detectGTM(url);
+
+    expect(mockInitPuppeteerService).toHaveBeenCalled();
+    expect(mockInitPuppeteerService).toHaveBeenCalledTimes(1);
+    expect(service.getInstalledGtms).toHaveBeenCalled();
+    expect(service.getInstalledGtms).toHaveBeenCalledTimes(1);
+    expect(service.closePage).toHaveBeenCalled();
+    expect(actual.length).toBeGreaterThan(0);
+  });
 });

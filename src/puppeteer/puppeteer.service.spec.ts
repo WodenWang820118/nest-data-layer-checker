@@ -12,11 +12,28 @@ export const mockService = {
   getDataLayer: jest.fn().mockReturnValue(['dom.js']),
   closeBrowser: jest.fn(),
   closePage: jest.fn(),
-  getOperationJson: jest.fn().mockReturnValue({}),
+  getOperationJson: jest.fn().mockReturnValue({
+    name: 'eeListClick',
+    steps: [
+      {
+        type: 'setViewport',
+        width: 1335,
+        height: 929,
+        deviceScaleFactor: 1,
+        isMobile: false,
+        hasTouch: false,
+        isLandscape: false,
+      },
+    ],
+  }),
   performOperation: jest
     .fn()
     .mockImplementation(() => mockService.clickElement()),
   clickElement: jest.fn(),
+  getInstalledGtms: jest
+    .fn()
+    .mockImplementation(() => mockService.getAllRequests()),
+  getAllRequests: jest.fn().mockReturnValue(['GTM-XXXXXX']),
 };
 
 describe('PuppeteerService', () => {
@@ -33,6 +50,7 @@ describe('PuppeteerService', () => {
     }).compile();
 
     service = module.get<PuppeteerService>(PuppeteerService);
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -91,10 +109,18 @@ describe('PuppeteerService', () => {
     await service.performOperation(operation);
     // assert
     expect(operation).toBeInstanceOf(Object);
-    expect(service.initBrowser).toHaveBeenCalled();
-    expect(service.initPage).toHaveBeenCalled();
     expect(service.getPage).toHaveBeenCalled();
     expect(service.goToPage).toHaveBeenCalled();
     expect(service.clickElement).toHaveBeenCalled();
+  });
+
+  it('should give the installed GTM according to the URL', async () => {
+    // arrange
+    const url = 'https://www.google.com';
+    // actual
+    const gtm = await service.getInstalledGtms(url);
+    // assert
+    expect(service.getAllRequests).toHaveBeenCalled();
+    expect(gtm.length).toBeGreaterThan(0);
   });
 });

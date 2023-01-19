@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import puppeteer, { Browser, Page } from 'puppeteer';
-import { HEADLESS, OPERATIONS } from './puppeteer.config';
+import { HEADLESS, OPERATIONS, USER_AGENT } from './puppeteer.config';
 @Injectable()
 export class PuppeteerService {
   private browser: Browser;
@@ -36,9 +36,11 @@ export class PuppeteerService {
   }
 
   async goToPage(url: string) {
-    const response = await this.getPage().goto(url);
+    const response = await this.getPage().goto(url, {
+      waitUntil: 'networkidle2',
+    });
     if (response.status() === 401) {
-      await this.httpAuth(this.getPage(), getAuthCredentials());
+      await this.httpAuth(this.getPage(), this.getAuthCredentials());
       await this.getPage().goto(url);
     } else {
       await this.getPage().goto(url);
@@ -94,10 +96,46 @@ export class PuppeteerService {
       password: credentials.password,
     });
   }
-}
-function getAuthCredentials(): any {
-  return {
-    username: 'username',
-    password: 'password',
-  };
+
+  // TODO: a way to get the credentials from a file
+  getAuthCredentials(): any {
+    return {
+      username: 'username',
+      password: 'password',
+    };
+  }
+
+  async getInstalledGtms(url: string) {
+    const requests = await this.getAllRequests(url);
+    const gtmRequests = requests.filter((request) =>
+      request.includes('collect?v=2'),
+    );
+    if (gtmRequests.length > 0) {
+      const installedGtms = gtmRequests.map(
+        (request) => request.split('tid=')[1].split('&')[0],
+      );
+      return installedGtms;
+    }
+    return [];
+  }
+
+  async getAllRequests(url: string) {
+    const requests = [];
+    await this.getPage().setRequestInterception(true);
+    await this.getPage().setUserAgent(USER_AGENT);
+
+    this.getPage().on('request', async (request) => {
+      try {
+        if (request.isInterceptResolutionHandled()) return;
+        requests.push(request.url());
+        await request.continue();
+      } catch (error) {
+        throw error;
+      }
+    });
+
+    await this.goToPage(url);
+    await this.getPage().reload({ waitUntil: 'networkidle2' });
+    return requests;
+  }
 }

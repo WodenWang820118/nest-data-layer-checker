@@ -48,4 +48,17 @@ export class PuppeteerController {
       return result;
     }
   }
+
+  @Get('/detect-gtm')
+  async detectGTM(@Query('url') url: string) {
+    console.log('detectGTM', url);
+    await this.initPuppeteerService();
+    const page = this.puppeteerService.getPage();
+    if (page) {
+      const result = await this.puppeteerService.getInstalledGtms(url);
+      console.dir('result', result);
+      await this.puppeteerService.closePage();
+      return result;
+    }
+  }
 }
