@@ -1,8 +1,18 @@
 import { rootDir } from './puppeteer.config';
 import { readFileSync } from 'fs';
-import { Body, Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Query,
+  Injectable,
+  Global,
+} from '@nestjs/common';
 import { PuppeteerService } from './puppeteer.service';
 @Controller('puppeteer')
+@Injectable()
+@Global()
 export class PuppeteerController {
   constructor(private readonly puppeteerService: PuppeteerService) {}
 
