@@ -1,7 +1,18 @@
-import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Query,
+  Injectable,
+  Global,
+} from '@nestjs/common';
 import { AirtableService } from './airtable.service';
 
 @Controller('airtable')
+@Injectable()
+@Global()
 export class AirtableController {
   constructor(private readonly service: AirtableService) {}
 
@@ -22,16 +33,5 @@ export class AirtableController {
     @Query('token') token: string,
   ) {
     return this.service.getView(baseId, tableId, viewId, token);
-  }
-
-  @Patch('/:baseId/:tableId/:recordId')
-  patchView(
-    @Param('baseId') baseId: string,
-    @Param('tableId') tableId: string,
-    @Param('recordId') recordId: string,
-    @Body() fields: any,
-    @Query('token') token: string,
-  ) {
-    return this.service.patchView(baseId, tableId, recordId, fields, token);
   }
 }

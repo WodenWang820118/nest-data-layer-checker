@@ -1,14 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PuppeteerService } from './puppeteer.service';
 
-export const mockService = {
-  initBrowser: jest.fn().mockImplementation(() => mockService.setBrowser({})),
+export const mockPuppeteerService = {
+  initBrowser: jest
+    .fn()
+    .mockImplementation(() => mockPuppeteerService.setBrowser({})),
   setBrowser: jest.fn(),
   getBrowser: jest.fn().mockReturnValue({}),
-  initPage: jest.fn().mockImplementation(() => mockService.setPage({})),
+  initPage: jest
+    .fn()
+    .mockImplementation(() => mockPuppeteerService.setPage({})),
   setPage: jest.fn(),
   getPage: jest.fn().mockReturnValue({}),
-  goToPage: jest.fn().mockImplementation(() => mockService.getPage()),
+  goToPage: jest.fn().mockImplementation(() => mockPuppeteerService.getPage()),
   getDataLayer: jest.fn().mockReturnValue(['dom.js']),
   closeBrowser: jest.fn(),
   closePage: jest.fn(),
@@ -28,12 +32,21 @@ export const mockService = {
   }),
   performOperation: jest
     .fn()
-    .mockImplementation(() => mockService.clickElement()),
+    .mockImplementation(() => mockPuppeteerService.clickElement()),
   clickElement: jest.fn(),
   getInstalledGtms: jest
     .fn()
-    .mockImplementation(() => mockService.getAllRequests()),
+    .mockImplementation(() => mockPuppeteerService.getAllRequests()),
   getAllRequests: jest.fn().mockReturnValue(['GTM-XXXXXX']),
+  initPuppeteerService: jest.fn().mockImplementation(() => {
+    mockPuppeteerService.initBrowser();
+    mockPuppeteerService.initPage();
+  }),
+  initGetDataLayerOperation: jest.fn().mockImplementation((url: string) => {
+    mockPuppeteerService.initPuppeteerService();
+    mockPuppeteerService.goToPage(url);
+    return mockPuppeteerService.getDataLayer();
+  }),
 };
 
 describe('PuppeteerService', () => {
@@ -44,7 +57,7 @@ describe('PuppeteerService', () => {
       providers: [
         {
           provide: PuppeteerService,
-          useValue: mockService,
+          useValue: mockPuppeteerService,
         },
       ],
     }).compile();
@@ -122,5 +135,46 @@ describe('PuppeteerService', () => {
     // assert
     expect(service.getAllRequests).toHaveBeenCalled();
     expect(gtm.length).toBeGreaterThan(0);
+  });
+
+  it('should init the PuppeteerService', async () => {
+    // actual
+    await service.initPuppeteerService();
+    // assert
+    expect(service.initBrowser).toHaveBeenCalled();
+    expect(service.initPage).toHaveBeenCalled();
+  });
+
+  describe('should initGetDataLayerOption', () => {
+    // arrange
+    const url = 'https://www.google.com';
+    // assert
+    it('should initPuppeteerService', async () => {
+      // actual
+      await service.initGetDataLayerOperation(url);
+      // assert
+      expect(service.initPuppeteerService).toHaveBeenCalled();
+    });
+
+    it('should goToPage', async () => {
+      // actual
+      await service.initGetDataLayerOperation(url);
+      // assert
+      expect(service.goToPage).toHaveBeenCalled();
+    });
+
+    it('should getDataLayer', async () => {
+      // actual
+      await service.initGetDataLayerOperation(url);
+      // assert
+      expect(service.getDataLayer).toHaveBeenCalled();
+    });
+
+    it('should return the dataLayer', async () => {
+      // actual
+      const dataLayer = await service.initGetDataLayerOperation(url);
+      // assert
+      expect(dataLayer).toBeDefined();
+    });
   });
 });

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PuppeteerController } from './puppeteer.controller';
 import { PuppeteerService } from './puppeteer.service';
-import { mockService } from './puppeteer.service.spec';
+import { mockPuppeteerService } from './puppeteer.service.spec';
 
 describe('PuppeteerController', () => {
   let controller: PuppeteerController;
@@ -13,7 +13,7 @@ describe('PuppeteerController', () => {
       providers: [
         {
           provide: PuppeteerService,
-          useValue: mockService,
+          useValue: mockPuppeteerService,
         },
       ],
     }).compile();
@@ -23,67 +23,77 @@ describe('PuppeteerController', () => {
     jest.clearAllMocks();
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-
-  it.each([{ url: 'https://www.104.com.tw/jobs/main/' }])(
-    'should take an url and return the dataLayer',
-    async ({ url }) => {
-      // actual
-      const mockInitPuppeteerService = jest.spyOn(
-        controller,
-        'initPuppeteerService',
-      );
-      // always init Puppeteer on the controller side
-      const actual = await controller.getDataLayer(url);
-      // assert
-      expect(mockInitPuppeteerService).toHaveBeenCalled();
-      expect(service.getBrowser).toHaveBeenCalled();
-      expect(service.getBrowser).toHaveBeenCalledTimes(1);
-      expect(service.getPage).toHaveBeenCalled();
-      expect(service.goToPage).toHaveBeenCalled();
-      expect(service.getDataLayer).toHaveBeenCalled();
-      expect(service.closePage).toHaveBeenCalled();
-      expect(actual.length).toBeGreaterThan(0);
-    },
-  );
-
-  it('should perform operation according to the JSON recording and log dataLayer', async () => {
-    // arrange
-    const operation = service.getOperationJson('eeListClick');
+  describe('should take an url and return the dataLayer', () => {
     // actual
-    // always init Puppeteer on the controller side
-    const mockInitPuppeteerService = jest.spyOn(
-      controller,
-      'initPuppeteerService',
-    );
-    const actual = await controller.performActionAndGetDataLayer(operation);
+    const url = 'https://www.104.com.tw/jobs/main/';
     // assert
-    expect(mockInitPuppeteerService).toHaveBeenCalled();
-    expect(service.performOperation).toHaveBeenCalled();
-    expect(service.getDataLayer).toHaveBeenCalled();
-    expect(service.closePage).toHaveBeenCalled();
-    expect(actual.length).toBeGreaterThan(0);
+    it('should initGetDataLayerOperation', async () => {
+      const actual = await controller.getDataLayer(url);
+      expect(service.initGetDataLayerOperation).toHaveBeenCalled();
+      expect(service.initGetDataLayerOperation).toHaveBeenCalledTimes(1);
+    });
   });
 
-  it('should get GTM ids', async () => {
+  describe('should perform operation according to the JSON recording and log dataLayer', () => {
+    it('should initPuppeteerService', async () => {
+      const operation = service.getOperationJson('eeListClick');
+      await controller.performActionAndGetDataLayer(operation);
+      expect(service.initPuppeteerService).toHaveBeenCalled();
+      expect(service.initPuppeteerService).toHaveBeenCalledTimes(1);
+    });
+
+    it('should performOperation', async () => {
+      const operation = service.getOperationJson('eeListClick');
+      await controller.performActionAndGetDataLayer(operation);
+      expect(service.performOperation).toHaveBeenCalled();
+      expect(service.performOperation).toHaveBeenCalledTimes(1);
+    });
+
+    it('should getDataLayer', async () => {
+      const operation = service.getOperationJson('eeListClick');
+      await controller.performActionAndGetDataLayer(operation);
+      expect(service.getDataLayer).toHaveBeenCalled();
+      expect(service.getDataLayer).toHaveBeenCalledTimes(1);
+    });
+
+    it('should closePage', async () => {
+      const operation = service.getOperationJson('eeListClick');
+      await controller.performActionAndGetDataLayer(operation);
+      expect(service.closePage).toHaveBeenCalled();
+      expect(service.closePage).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return dataLayer', async () => {
+      const operation = service.getOperationJson('eeListClick');
+      const actual = await controller.performActionAndGetDataLayer(operation);
+      expect(actual.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('should get GTM ids', () => {
     // arrange
     const url = 'https://www.104.com.tw/jobs/main/';
-    // actual
     // assert
-    // always init Puppeteer on the controller side
-    const mockInitPuppeteerService = jest.spyOn(
-      controller,
-      'initPuppeteerService',
-    );
-    const actual = await controller.detectGTM(url);
+    it('should initPupeeteerService', async () => {
+      await controller.detectGTM(url);
+      expect(service.initPuppeteerService).toHaveBeenCalled();
+      expect(service.initPuppeteerService).toHaveBeenCalledTimes(1);
+    });
 
-    expect(mockInitPuppeteerService).toHaveBeenCalled();
-    expect(mockInitPuppeteerService).toHaveBeenCalledTimes(1);
-    expect(service.getInstalledGtms).toHaveBeenCalled();
-    expect(service.getInstalledGtms).toHaveBeenCalledTimes(1);
-    expect(service.closePage).toHaveBeenCalled();
-    expect(actual.length).toBeGreaterThan(0);
+    it('should getInstalledGtms', async () => {
+      await controller.detectGTM(url);
+      expect(service.getInstalledGtms).toHaveBeenCalled();
+      expect(service.getInstalledGtms).toHaveBeenCalledTimes(1);
+    });
+
+    it('should closePage', async () => {
+      await controller.detectGTM(url);
+      expect(service.closePage).toHaveBeenCalled();
+    });
+
+    it('should return GTM ids', async () => {
+      const actual = await controller.detectGTM(url);
+      expect(actual.length).toBeGreaterThan(0);
+    });
   });
 });
