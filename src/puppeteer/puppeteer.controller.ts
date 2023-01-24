@@ -1,7 +1,4 @@
-import { rootDir } from './puppeteer.config';
-import { readFileSync } from 'fs';
 import {
-  Body,
   Controller,
   Get,
   Param,
@@ -28,21 +25,8 @@ export class PuppeteerController {
 
   @Get('/data-layer')
   async getDataLayer(@Query('url') url: string) {
-    this.initPuppeteerService();
-    // console.log('url', url);
-    const broswer = this.puppeteerService.getBrowser();
-    // console.log('browser', broswer);
-    if (broswer) {
-      const page = this.puppeteerService.getPage();
-      // console.log('page', page);
-      if (page) {
-        await this.puppeteerService.goToPage(url);
-        const result = await this.puppeteerService.getDataLayer();
-        // console.log('result', result);
-        await this.puppeteerService.closePage();
-        return result;
-      }
-    }
+    console.log('getDataLayer', url);
+    return await this.puppeteerService.initGetDataLayerOperation(url);
   }
 
   @Get('/action/:name')
@@ -50,10 +34,10 @@ export class PuppeteerController {
     console.log('action', name);
     const operation = this.puppeteerService.getOperationJson(name);
     if (operation) {
-      await this.initPuppeteerService(operation.steps[0]);
+      await this.puppeteerService.initPuppeteerService(operation.steps[0]);
       await this.puppeteerService.performOperation(operation);
       const result = await this.puppeteerService.getDataLayer();
-      console.dir('result', result);
+      // console.dir('result', result);
       await this.puppeteerService.closePage();
       return result;
     }
@@ -61,14 +45,11 @@ export class PuppeteerController {
 
   @Get('/detect-gtm')
   async detectGTM(@Query('url') url: string) {
-    console.log('detectGTM', url);
-    await this.initPuppeteerService();
-    const page = this.puppeteerService.getPage();
-    if (page) {
-      const result = await this.puppeteerService.getInstalledGtms(url);
-      console.dir('result', result);
-      await this.puppeteerService.closePage();
-      return result;
-    }
+    // console.log('detectGTM', url);
+    await this.puppeteerService.initPuppeteerService();
+    const result = await this.puppeteerService.getInstalledGtms(url);
+    // console.dir('result', result);
+    await this.puppeteerService.closePage();
+    return result;
   }
 }

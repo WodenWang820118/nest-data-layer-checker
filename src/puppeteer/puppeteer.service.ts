@@ -35,6 +35,19 @@ export class PuppeteerService {
     return this.page;
   }
 
+  async initPuppeteerService(settings?: object) {
+    await this.initBrowser(settings);
+    await this.initPage();
+  }
+
+  async initGetDataLayerOperation(url: string) {
+    await this.initPuppeteerService();
+    await this.goToPage(url);
+    const result = await this.getDataLayer();
+    await this.closePage();
+    return result;
+  }
+
   async goToPage(url: string) {
     const response = await this.getPage().goto(url, {
       waitUntil: 'networkidle2',
@@ -48,7 +61,7 @@ export class PuppeteerService {
   }
 
   async getDataLayer() {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     return await this.getPage().evaluate(() => {
       return window.dataLayer;
     });
@@ -63,7 +76,7 @@ export class PuppeteerService {
   }
 
   getOperationJson(name: string) {
-    return OPERATIONS.find((op) => op.name === name).operation;
+    return OPERATIONS.find(op => op.name === name).operation;
   }
 
   async performOperation(operation: any) {
@@ -85,7 +98,7 @@ export class PuppeteerService {
   async clickElement(page: Page, selector: string) {
     console.log('click element');
     await page.waitForSelector(selector).then(async () => {
-      await page.$eval(selector, (el) => (el as HTMLButtonElement).click());
+      await page.$eval(selector, el => (el as HTMLButtonElement).click());
     });
   }
 
@@ -107,12 +120,12 @@ export class PuppeteerService {
 
   async getInstalledGtms(url: string) {
     const requests = await this.getAllRequests(url);
-    const gtmRequests = requests.filter((request) =>
+    const gtmRequests = requests.filter(request =>
       request.includes('collect?v=2'),
     );
     if (gtmRequests.length > 0) {
       const installedGtms = gtmRequests.map(
-        (request) => request.split('tid=')[1].split('&')[0],
+        request => request.split('tid=')[1].split('&')[0],
       );
       return installedGtms;
     }
@@ -124,7 +137,7 @@ export class PuppeteerService {
     await this.getPage().setRequestInterception(true);
     await this.getPage().setUserAgent(USER_AGENT);
 
-    this.getPage().on('request', async (request) => {
+    this.getPage().on('request', async request => {
       try {
         if (request.isInterceptResolutionHandled()) return;
         requests.push(request.url());

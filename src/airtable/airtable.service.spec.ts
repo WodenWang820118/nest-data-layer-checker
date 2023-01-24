@@ -2,10 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AirtableService } from './airtable.service';
 import { Observable } from 'rxjs';
 
-export const mockService = {
+export const mockAirtableService = {
   getRecords: jest.fn().mockReturnValue(new Observable()),
   getView: jest.fn().mockReturnValue(new Observable()),
-  patchView: jest.fn().mockReturnValue(new Observable()),
+  patchAirtable: jest.fn().mockReturnValue(new Observable()),
+  createField: jest.fn().mockReturnValue(new Observable()),
 };
 
 export const baseId = 'app123';
@@ -22,7 +23,7 @@ describe('AirtableService', () => {
       providers: [
         {
           provide: AirtableService,
-          useValue: mockService,
+          useValue: mockAirtableService,
         },
       ],
     }).compile();
@@ -50,25 +51,33 @@ describe('AirtableService', () => {
     expect(records).toBeDefined();
   });
 
-  it('should patch (update) the view', () => {
+  it('should patch (update) the view and return observable', () => {
     // arrange
     const recordId = 'record123';
     // actual
-    const response = service.patchView(
-      baseId,
-      tableId,
-      recordId,
-      fields,
-      token,
-    );
+    const response = service.patchAirtable([], baseId, tableId, viewId, token);
     // assert
-    expect(mockService.patchView).toHaveBeenCalledWith(
+    expect(mockAirtableService.patchAirtable).toHaveBeenCalledWith(
+      [],
       baseId,
       tableId,
-      recordId,
-      fields,
+      viewId,
       token,
     );
     expect(response).toBeInstanceOf(Observable);
+  });
+
+  it('should create a new field on the airtable view', () => {
+    // arrange
+    const field = 'field123';
+    // actual
+    service.createField(baseId, tableId, field, token);
+    // assert
+    expect(mockAirtableService.createField).toHaveBeenCalledWith(
+      baseId,
+      tableId,
+      field,
+      token,
+    );
   });
 });

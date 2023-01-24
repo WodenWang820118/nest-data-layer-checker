@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AirtableController } from './airtable.controller';
 import { AirtableService } from './airtable.service';
-import { mockService, token, fields } from './airtable.service.spec';
+import { mockAirtableService, token, fields } from './airtable.service.spec';
 import { Observable } from 'rxjs';
 
 const baseId = 'app123';
@@ -18,7 +18,7 @@ describe('AirtableController', () => {
       providers: [
         {
           provide: AirtableService,
-          useValue: mockService,
+          useValue: mockAirtableService,
         },
       ],
     }).compile();
@@ -47,20 +47,5 @@ describe('AirtableController', () => {
     // assert
     expect(records).toBeDefined();
     expect(records).toBeInstanceOf(Observable);
-  });
-
-  it('should PATCH the endpoint', () => {
-    // arrange
-    const recordId = 'record123';
-    // act
-    const records = controller.patchView(
-      baseId,
-      tableId,
-      recordId,
-      fields,
-      token,
-    );
-    // assert
-    expect(records).toBeDefined();
   });
 });
