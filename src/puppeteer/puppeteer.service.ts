@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import puppeteer, { Browser, Page } from 'puppeteer';
-import { HEADLESS, OPERATIONS, USER_AGENT } from './puppeteer.config';
+import { HEADLESS, OPERATIONS, USER_AGENT } from '../configs/puppeteer.config';
 @Injectable()
 export class PuppeteerService {
   private browser: Browser;

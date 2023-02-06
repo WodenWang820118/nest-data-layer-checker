@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PuppeteerModule } from './puppeteer/puppeteer.module';
 import { AirtableModule } from './airtable/airtable.module';
 import { DataLayerCheckerModule } from './data-layer-checker/data-layer-checker.module';
+import { GtmOperatorModule } from './gtm-operator/gtm-operator.module';
 
 @Module({
   imports: [
@@ -10,6 +11,7 @@ import { DataLayerCheckerModule } from './data-layer-checker/data-layer-checker.
     PuppeteerModule,
     AirtableModule,
     DataLayerCheckerModule,
+    GtmOperatorModule,
   ],
   controllers: [],
   providers: [],
