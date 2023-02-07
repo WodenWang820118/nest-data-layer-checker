@@ -55,14 +55,14 @@ export const mockGtmOperatorService = {
     page.close();
   }),
   locateTestingPage: jest.fn().mockReturnValue({}),
-  observeGcs: jest.fn().mockImplementation(async () => {
+  observeGcsViaGtm: jest.fn().mockImplementation(async () => {
     await mockGtmOperatorService.goToPageViaGtm();
     await mockGtmOperatorService.crawlPageResponses();
   }),
-  observeAndKeepGcsAnomalies: jest.fn().mockImplementation(async () => {
+  observeAndKeepGcsAnomaliesViaGtm: jest.fn().mockImplementation(async () => {
     const loops = 3;
     for (let i = 0; i < loops; i++) {
-      await mockGtmOperatorService.observeGcs();
+      await mockGtmOperatorService.observeGcsViaGtm();
     }
   }),
 };
@@ -212,7 +212,7 @@ describe('GtmOperatorService', () => {
   it('should observe the GCS', async () => {
     // act
     const gtmUrl = 'https://tagmanager.google.com';
-    await service.observeGcs(gtmUrl);
+    await service.observeGcsViaGtm(gtmUrl);
     // assert
     expect(service.goToPageViaGtm).toHaveBeenCalled();
     expect(service.crawlPageResponses).toHaveBeenCalled();
@@ -225,9 +225,9 @@ describe('GtmOperatorService', () => {
     const expectValue = 'G111';
     const loops = 3;
 
-    await service.observeAndKeepGcsAnomalies(gtmUrl, expectValue, loops);
+    await service.observeAndKeepGcsAnomaliesViaGtm(gtmUrl, expectValue, loops);
     // assert
-    expect(service.observeGcs).toHaveBeenCalled();
-    expect(service.observeGcs).toHaveBeenCalledTimes(loops);
+    expect(service.observeGcsViaGtm).toHaveBeenCalled();
+    expect(service.observeGcsViaGtm).toHaveBeenCalledTimes(loops);
   });
 });

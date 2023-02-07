@@ -6,17 +6,17 @@ export class GtmOperatorController {
   constructor(private gtmOperatorService: GtmOperatorService) {}
 
   @Get('gcs')
-  async observeGcs(@Query('gtmUrl') gtmUrl: string) {
-    await this.gtmOperatorService.observeGcs(gtmUrl);
+  async observeGcsViaGtm(@Query('gtmUrl') gtmUrl: string) {
+    await this.gtmOperatorService.observeGcsViaGtm(gtmUrl);
   }
 
   @Get('anomalies')
-  async observeAndKeepGcsAnomalies(
+  async observeAndKeepGcsAnomaliesViaGtm(
     @Query('gtmUrl') gtmUrl: string,
     @Query('expectValue') expectValue: string,
     @Query('loops') loops = 1,
   ) {
-    this.gtmOperatorService.observeAndKeepGcsAnomalies(
+    this.gtmOperatorService.observeAndKeepGcsAnomaliesViaGtm(
       gtmUrl,
       expectValue,
       loops,

@@ -58,19 +58,19 @@ export class GtmOperatorService {
     return pages[pages.length - 1];
   }
 
-  async observeGcs(gtmUrl: string): Promise<string[]> {
+  async observeGcsViaGtm(gtmUrl: string): Promise<string[]> {
     await this.goToPageViaGtm(gtmUrl);
     const responses = await this.crawlPageResponses();
     return this.puppeteerService.getGcs(responses);
   }
 
-  async observeAndKeepGcsAnomalies(
+  async observeAndKeepGcsAnomaliesViaGtm(
     gtmUrl: string,
     expectValue: string,
     loops = 1,
   ) {
     for (let i = 0; i < loops; i++) {
-      const gcs = await this.observeGcs(gtmUrl);
+      const gcs = await this.observeGcsViaGtm(gtmUrl);
       console.log(gcs);
       if (!gcs.includes(expectValue)) {
         console.log('GCS anomaly detected!');
