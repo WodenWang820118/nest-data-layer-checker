@@ -151,4 +151,10 @@ export class PuppeteerService {
     await this.getPage().reload({ waitUntil: 'networkidle2' });
     return requests;
   }
+
+  getGcs(requests: string[]) {
+    // stripe the gcs= from the request
+    if (!requests) return [];
+    return requests.map(request => request.split('gcs=')[1].split('&')[0]);
+  }
 }

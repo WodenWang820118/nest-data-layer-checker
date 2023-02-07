@@ -41,7 +41,7 @@ export const mockGtmOperatorService = {
     );
   }),
 
-  crawlPageRequests: jest.fn().mockImplementation(async () => {
+  crawlPageResponses: jest.fn().mockImplementation(async () => {
     const page = mockPuppeteerService.getPage();
     page.setRequestInterception = jest.fn().mockImplementation(boolean => {});
     page.on = jest.fn().mockImplementation((event, callback) => {
@@ -55,6 +55,16 @@ export const mockGtmOperatorService = {
     page.close();
   }),
   locateTestingPage: jest.fn().mockReturnValue({}),
+  observeGcs: jest.fn().mockImplementation(async () => {
+    await mockGtmOperatorService.goToPageViaGtm();
+    await mockGtmOperatorService.crawlPageResponses();
+  }),
+  observeAndKeepGcsAnomalies: jest.fn().mockImplementation(async () => {
+    const loops = 3;
+    for (let i = 0; i < loops; i++) {
+      await mockGtmOperatorService.observeGcs();
+    }
+  }),
 };
 
 describe('GtmOperatorService', () => {
@@ -142,17 +152,17 @@ describe('GtmOperatorService', () => {
     });
   });
 
-  describe('crawlPageRequests', () => {
+  describe('crawlPageResponses', () => {
     it('should call PuppeteerService.getPage', () => {
       // act
-      service.crawlPageRequests();
+      service.crawlPageResponses();
       // assert
       expect(service.puppeteerService.getPage).toHaveBeenCalled();
     });
 
     it('should set the request interception to true', () => {
       // act
-      service.crawlPageRequests();
+      service.crawlPageResponses();
       const page = service.puppeteerService.getPage();
       // assert
       expect(page.setRequestInterception).toHaveBeenCalledWith(true);
@@ -160,7 +170,7 @@ describe('GtmOperatorService', () => {
 
     it('should listen to the request event', () => {
       // act
-      service.crawlPageRequests();
+      service.crawlPageResponses();
       const page = service.puppeteerService.getPage();
       // assert
       expect(page.on).toHaveBeenCalled();
@@ -168,7 +178,7 @@ describe('GtmOperatorService', () => {
 
     it('should reload the page', () => {
       // act
-      service.crawlPageRequests();
+      service.crawlPageResponses();
       const page = service.puppeteerService.getPage();
       // assert
       expect(page.reload).toHaveBeenCalled();
@@ -176,17 +186,17 @@ describe('GtmOperatorService', () => {
 
     it('should close the page', async () => {
       // act
-      await service.crawlPageRequests();
+      await service.crawlPageResponses();
       const page = service.puppeteerService.getPage();
       // assert
       expect(page.close).toHaveBeenCalled();
     });
 
-    it('should have requests returned', () => {
+    it('should have reponses returned', () => {
       // act
-      const requests = service.crawlPageRequests();
+      const reponses = service.crawlPageResponses();
       // assert
-      expect(requests).toBeDefined();
+      expect(reponses).toBeDefined();
     });
   });
 
@@ -197,5 +207,27 @@ describe('GtmOperatorService', () => {
     const page = await service.locateTestingPage();
     // assert
     expect(page).toBeDefined();
+  });
+
+  it('should observe the GCS', async () => {
+    // act
+    const gtmUrl = 'https://tagmanager.google.com';
+    await service.observeGcs(gtmUrl);
+    // assert
+    expect(service.goToPageViaGtm).toHaveBeenCalled();
+    expect(service.crawlPageResponses).toHaveBeenCalled();
+    expect(service.crawlPageResponses).toBeDefined();
+  });
+
+  it('should observe and keep the GCS anomalies', async () => {
+    // act
+    const gtmUrl = 'https://tagmanager.google.com';
+    const expectValue = 'G111';
+    const loops = 3;
+
+    await service.observeAndKeepGcsAnomalies(gtmUrl, expectValue, loops);
+    // assert
+    expect(service.observeGcs).toHaveBeenCalled();
+    expect(service.observeGcs).toHaveBeenCalledTimes(loops);
   });
 });

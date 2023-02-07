@@ -26,24 +26,27 @@ describe('GtmOperatorController', () => {
   });
 
   describe('observeGcs', () => {
-    it('should call GtmOperatorService.goToPageViaGtm', async () => {
+    it('should call GtmOperatorService.observeGcs', async () => {
       // arrange
       const gtmUrl = 'https://tagmanager.google.com';
       // act
       await controller.observeGcs(gtmUrl);
       // assert
-      expect(mockGtmOperatorService.goToPageViaGtm).toHaveBeenCalled();
-      expect(mockGtmOperatorService.goToPageViaGtm).toHaveBeenCalledTimes(1);
+      expect(mockGtmOperatorService.observeGcs).toHaveBeenCalled();
+      expect(mockGtmOperatorService.observeGcs).toHaveBeenCalledTimes(1);
     });
 
-    it('should crawl the page requests regarding the GTM gcs', async () => {
+    it('should observe gcs multiple times', async () => {
       // arrange
       const gtmUrl = 'https://tagmanager.google.com';
+      const expectValue = 'G111';
+      const loops = 3;
       // act
-      await controller.observeGcs(gtmUrl);
+      await controller.observeAndKeepGcsAnomalies(gtmUrl, expectValue, loops);
       // assert
-      expect(mockGtmOperatorService.crawlPageRequests).toHaveBeenCalled();
-      expect(mockGtmOperatorService.crawlPageRequests).toHaveBeenCalledTimes(1);
+      expect(
+        mockGtmOperatorService.observeAndKeepGcsAnomalies,
+      ).toHaveBeenCalled();
     });
   });
 });

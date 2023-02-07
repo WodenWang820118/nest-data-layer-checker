@@ -7,9 +7,19 @@ export class GtmOperatorController {
 
   @Get('gcs')
   async observeGcs(@Query('gtmUrl') gtmUrl: string) {
-    await this.gtmOperatorService.goToPageViaGtm(gtmUrl);
-    const requests = await this.gtmOperatorService.crawlPageRequests();
-    console.log('requests', requests);
-    return requests;
+    await this.gtmOperatorService.observeGcs(gtmUrl);
+  }
+
+  @Get('anomalies')
+  async observeAndKeepGcsAnomalies(
+    @Query('gtmUrl') gtmUrl: string,
+    @Query('expectValue') expectValue: string,
+    @Query('loops') loops = 1,
+  ) {
+    this.gtmOperatorService.observeAndKeepGcsAnomalies(
+      gtmUrl,
+      expectValue,
+      loops,
+    );
   }
 }

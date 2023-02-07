@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PuppeteerService } from '../puppeteer/puppeteer.service';
+import { Page } from 'puppeteer';
 
 @Injectable()
 export class GtmOperatorService {
   constructor(public puppeteerService: PuppeteerService) {}
+  testingPage: Page;
 
   async goToPageViaGtm(gtmUrl: string) {
     // 1) Open the GTM interface
@@ -28,36 +30,57 @@ export class GtmOperatorService {
     await broswer.waitForTarget(target => target.url() === websiteUrl);
   }
 
-  async crawlPageRequests() {
-    const requests: string[] = [];
+  async crawlPageResponses() {
+    const responses: string[] = [];
     // 1) Get the page
-    const browser = this.puppeteerService.getBrowser();
     const page = await this.locateTestingPage();
+    this.testingPage = page; // assign the variable for later use
 
-    // await this.locateTestingPage();
-
-    await page.setRequestInterception(true);
-
-    // 2) Listen to all requests
-    page.on('request', async request => {
+    // 2) Listen to all responses, push the ones that contain the gcs parameter
+    page.on('response', async response => {
       try {
-        if (request.isInterceptResolutionHandled()) return;
-        requests.push(request.url());
-        await request.continue();
+        if (response.request().url().includes('gcs=')) {
+          responses.push(response.request().url());
+        }
       } catch (error) {
-        request.abort();
+        console.log(error);
       }
     });
 
-    await page.reload({ waitUntil: 'networkidle2' });
-    await page.close();
-    return requests;
+    await page.waitForResponse(response => response.url().includes('gcs='));
+    // await page.close();
+    return responses;
   }
 
   async locateTestingPage() {
     const browser = this.puppeteerService.getBrowser();
     const pages = await browser.pages();
-    // console.log('pages', pages);
     return pages[pages.length - 1];
+  }
+
+  async observeGcs(gtmUrl: string): Promise<string[]> {
+    await this.goToPageViaGtm(gtmUrl);
+    const responses = await this.crawlPageResponses();
+    return this.puppeteerService.getGcs(responses);
+  }
+
+  async observeAndKeepGcsAnomalies(
+    gtmUrl: string,
+    expectValue: string,
+    loops = 1,
+  ) {
+    for (let i = 0; i < loops; i++) {
+      const gcs = await this.observeGcs(gtmUrl);
+      console.log(gcs);
+      if (!gcs.includes(expectValue)) {
+        console.log('GCS anomaly detected!');
+        console.log(gcs);
+        return;
+      } else {
+        console.log('No anomalies detected!');
+        await this.testingPage.browser().close();
+      }
+    }
+    return;
   }
 }

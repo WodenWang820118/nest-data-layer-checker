@@ -47,6 +47,7 @@ export const mockPuppeteerService = {
     mockPuppeteerService.goToPage(url);
     return mockPuppeteerService.getDataLayer();
   }),
+  getGcs: jest.fn().mockReturnValue(['111']),
 };
 
 describe('PuppeteerService', () => {
