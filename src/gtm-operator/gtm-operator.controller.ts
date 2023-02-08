@@ -15,11 +15,15 @@ export class GtmOperatorController {
     @Query('gtmUrl') gtmUrl: string,
     @Query('expectValue') expectValue: string,
     @Query('loops') loops = 1,
+    @Query('args') args: string = '--incognito',
+    @Query('headless') headless = 'false',
   ) {
     this.gtmOperatorService.observeAndKeepGcsAnomaliesViaGtm(
       gtmUrl,
       expectValue,
       loops,
+      args,
+      headless,
     );
   }
 }

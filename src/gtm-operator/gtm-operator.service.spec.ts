@@ -224,8 +224,16 @@ describe('GtmOperatorService', () => {
     const gtmUrl = 'https://tagmanager.google.com';
     const expectValue = 'G111';
     const loops = 3;
+    const settings = '--incognito';
+    const headless = 'false';
 
-    await service.observeAndKeepGcsAnomaliesViaGtm(gtmUrl, expectValue, loops);
+    await service.observeAndKeepGcsAnomaliesViaGtm(
+      gtmUrl,
+      expectValue,
+      loops,
+      settings,
+      headless,
+    );
     // assert
     expect(service.observeGcsViaGtm).toHaveBeenCalled();
     expect(service.observeGcsViaGtm).toHaveBeenCalledTimes(loops);

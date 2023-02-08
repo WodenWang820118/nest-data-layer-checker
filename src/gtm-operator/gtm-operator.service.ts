@@ -7,14 +7,15 @@ export class GtmOperatorService {
   constructor(public puppeteerService: PuppeteerService) {}
   testingPage: Page;
 
-  async goToPageViaGtm(gtmUrl: string) {
+  async goToPageViaGtm(gtmUrl: string, args?: string, headless?: string) {
     // 1) Open the GTM interface
     const websiteUrl = gtmUrl
       .split('&')
       .find(element => element.startsWith('url='))
       .split('=')[1];
     await this.puppeteerService.initPuppeteerService({
-      headless: false,
+      headless: headless.toLowerCase() === 'true' ? true : false || false,
+      args: args.split(','),
     });
     await this.puppeteerService.goToPage(gtmUrl);
     const broswer = this.puppeteerService.getBrowser();
@@ -58,8 +59,12 @@ export class GtmOperatorService {
     return pages[pages.length - 1];
   }
 
-  async observeGcsViaGtm(gtmUrl: string): Promise<string[]> {
-    await this.goToPageViaGtm(gtmUrl);
+  async observeGcsViaGtm(
+    gtmUrl: string,
+    args?: string,
+    headless?: string,
+  ): Promise<string[]> {
+    await this.goToPageViaGtm(gtmUrl, args, headless);
     const responses = await this.crawlPageResponses();
     return this.puppeteerService.getGcs(responses);
   }
@@ -67,10 +72,12 @@ export class GtmOperatorService {
   async observeAndKeepGcsAnomaliesViaGtm(
     gtmUrl: string,
     expectValue: string,
-    loops = 1,
+    loops: number,
+    args?: string,
+    headless?: string,
   ) {
     for (let i = 0; i < loops; i++) {
-      const gcs = await this.observeGcsViaGtm(gtmUrl);
+      const gcs = await this.observeGcsViaGtm(gtmUrl, args, headless);
       console.log(gcs);
       if (!gcs.includes(expectValue)) {
         console.log('GCS anomaly detected!');

@@ -41,11 +41,15 @@ describe('GtmOperatorController', () => {
       const gtmUrl = 'https://tagmanager.google.com';
       const expectValue = 'G111';
       const loops = 3;
+      const settings = '--incognito';
+      const headless = 'false';
       // act
       await controller.observeAndKeepGcsAnomaliesViaGtm(
         gtmUrl,
         expectValue,
         loops,
+        settings,
+        headless,
       );
       // assert
       expect(
