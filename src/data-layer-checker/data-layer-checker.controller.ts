@@ -1,6 +1,5 @@
-import { map, Observable } from 'rxjs';
+import { Observable } from 'rxjs';
 import { AirtableController } from './../airtable/airtable.controller';
-import { PuppeteerController } from './../puppeteer/puppeteer.controller';
 import {
   Controller,
   Get,

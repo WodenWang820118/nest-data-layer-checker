@@ -13,16 +13,6 @@ import { PuppeteerService } from './puppeteer.service';
 export class PuppeteerController {
   constructor(private readonly puppeteerService: PuppeteerService) {}
 
-  async initPuppeteerService(settings?: any) {
-    await this.puppeteerService.initBrowser(settings);
-    await this.puppeteerService.initPage();
-  }
-
-  @Get()
-  greet() {
-    return 'You are in the Puppeteer Controller';
-  }
-
   @Get('/data-layer')
   async getDataLayer(@Query('url') url: string) {
     console.log('getDataLayer', url);
