@@ -6,6 +6,12 @@ export class PuppeteerService {
   private browser: Browser;
   private page: Page;
 
+  /**
+   * Initializes a new instance of the browser using Puppeteer.
+   *
+   * @param {Object} [settings={}] - The settings to use for the browser instance.
+   * @return A promise that resolves when the browser has been initialized.
+   */
   async initBrowser(settings?: any) {
     this.setBrowser(
       await puppeteer.launch({
@@ -22,6 +28,11 @@ export class PuppeteerService {
     return this.browser;
   }
 
+  /**
+   * Initializes a new page instance in the browser.
+   *
+   * @return A promise that resolves when the page has been initialized.
+   */
   async initPage() {
     this.setPage(await this.browser.newPage());
   }
@@ -34,11 +45,24 @@ export class PuppeteerService {
     return this.page;
   }
 
+  /**
+   * Initializes the Puppeteer service by calling the `initBrowser` and `initPage` methods.
+   *
+   * @param settings - The settings to use for the browser instance.
+   * @returns A promise that resolves when the Puppeteer service has been initialized.
+   */
   async initPuppeteerService(settings?: object) {
     await this.initBrowser(settings);
     await this.initPage();
   }
 
+  /**
+   * Initializes a new data layer operation by calling the `initPuppeteerService`, `goToPage`, and `getDataLayer` methods.
+   * Closes the page after the data layer has been retrieved.
+   *
+   * @param url - The URL to navigate to and retrieve the data layer from.
+   * @returns A promise that resolves with the data layer object.
+   */
   async initGetDataLayerOperation(url: string) {
     await this.initPuppeteerService();
     await this.goToPage(url);
@@ -47,6 +71,13 @@ export class PuppeteerService {
     return result;
   }
 
+  /**
+   * Navigates the Puppeteer page to the specified URL.
+   * Handles HTTP authentication if necessary.
+   *
+   * @param url - The URL to navigate to.
+   * @returns A promise that resolves when the navigation has completed.
+   */
   async goToPage(url: string) {
     const response = await this.getPage().goto(url, {
       waitUntil: 'networkidle2',
@@ -59,8 +90,14 @@ export class PuppeteerService {
     }
   }
 
-  async getDataLayer() {
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  /**
+   * Retrieves the `dataLayer` from the current Puppeteer page.
+   *
+   * @param seconds - The number of seconds to wait before retrieving the `dataLayer`. Defaults to 1000.
+   * @returns A promise that resolves with the `dataLayer` as an array.
+   */
+  async getDataLayer(seconds: number = 1000): Promise<any[]> {
+    await new Promise(resolve => setTimeout(resolve, seconds));
     return await this.getPage().evaluate(() => {
       return window.dataLayer;
     });
@@ -78,6 +115,12 @@ export class PuppeteerService {
     return OPERATIONS.find(op => op.name === name).operation;
   }
 
+  /**
+   * Performs a series of operations on the page instance.
+   *
+   * @param operation - The operation object containing steps to perform.
+   * @returns A promise that resolves when all steps have been performed.
+   */
   async performOperation(operation: any) {
     if (operation) {
       for (let i = 1; i < operation.steps.length; i++) {
@@ -94,6 +137,13 @@ export class PuppeteerService {
     }
   }
 
+  /**
+   * Clicks on the element specified by the selector.
+   *
+   * @param {puppeteer.Page} page - The Puppeteer Page object.
+   * @param {string} selector - The selector for the element to click.
+   * @returns Returns a Promise that resolves once the element has been clicked.
+   */
   async clickElement(page: Page, selector: string) {
     console.log('click element');
     await page.waitForSelector(selector).then(async () => {
@@ -117,6 +167,11 @@ export class PuppeteerService {
     };
   }
 
+  /**
+   * Get all installed Google Tag Manager ids from the given URL
+   * @param {string} url - URL from where to extract the GTM ids
+   * @returns An array of GTM ids
+   */
   async getInstalledGtms(url: string) {
     const requests = await this.getAllRequests(url);
     const gtmRequests = requests.filter(request =>
@@ -131,6 +186,12 @@ export class PuppeteerService {
     return [];
   }
 
+  /**
+   * Collects all requests made on the page.
+   *
+   * @param url - The URL to the page.
+   * @returns An array of request URLs.
+   */
   async getAllRequests(url: string) {
     const requests = [];
     await this.getPage().setRequestInterception(true);
@@ -151,6 +212,11 @@ export class PuppeteerService {
     return requests;
   }
 
+  /**
+   * Extracts Google Consent Status tracking codes from an array of URL strings
+   * @param {string[]} requests - An array of URL strings
+   * @returns An array of Google Consent Status
+   */
   getGcs(requests: string[]) {
     // stripe the gcs= from the request
     if (!requests) return [];

@@ -7,6 +7,15 @@ export class AirtableService {
 
   constructor(private readonly http: HttpService) {}
 
+  /**
+   * getRecords retrieves the records of a table.
+   *
+   * @param baseId The id of the base.
+   * @param tableId The id of the table.
+   * @param token The API key for the Airtable API.
+   *
+   * @returns A Promise that resolves to the response of the API request.
+   */
   getRecords(baseId: string, tableId: string, token: string) {
     const url = `${this.url}/${baseId}/${tableId}`;
     const headers = {
@@ -15,6 +24,16 @@ export class AirtableService {
     return this.http.get(url, { headers });
   }
 
+  /**
+   * getView retrieves a view of a table.
+   *
+   * @param baseId The id of the base.
+   * @param tableId The id of the table.
+   * @param viewId The id of the view.
+   * @param token The API key for the Airtable API.
+   *
+   * @returns A Promise that resolves to the response of the API request.
+   */
   getView(baseId: string, tableId: string, viewId: string, token: string) {
     const url = `${this.url}/${baseId}/${tableId}?view=${viewId}`;
     const headers = {
@@ -23,6 +42,17 @@ export class AirtableService {
     return this.http.get(url, { headers });
   }
 
+  /**
+   * patchAirtable updates one or multiple records in a table.
+   *
+   * @param promises An array of objects containing the id, field and value of the record(s) to update.
+   * @param baseId The id of the base.
+   * @param tableId The id of the table.
+   * @param viewId The id of the view.
+   * @param token The API key for the Airtable API.
+   *
+   * @returns void
+   */
   patchAirtable(
     promises: Array<any>,
     baseId: string,
@@ -72,6 +102,16 @@ export class AirtableService {
     });
   }
 
+  /**
+   * createField creates a new field in a table.
+   *
+   * @param baseId The id of the base.
+   * @param tableId The id of the table.
+   * @param field The name of the field to create.
+   * @param token The API key for the Airtable API.
+   *
+   * @returns void
+   */
   createField(baseId: string, tableId: string, field: string, token: string) {
     console.log('creating field...');
     const url = `https://api.airtable.com/v0/meta/bases/${baseId}/tables/${tableId}/fields`;

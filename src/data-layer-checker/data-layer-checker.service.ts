@@ -1,7 +1,6 @@
 import { Observable, map } from 'rxjs';
 import { Injectable } from '@nestjs/common';
 import { PuppeteerService } from '../puppeteer/puppeteer.service';
-import { HttpService } from '@nestjs/axios';
 import { AirtableService } from '../airtable/airtable.service';
 
 @Injectable()
@@ -9,7 +8,6 @@ export class DataLayerCheckerService {
   constructor(
     private readonly puppeteerService: PuppeteerService,
     private readonly airtableService: AirtableService,
-    private readonly http: HttpService,
   ) {}
 
   constructSpecsPipe(viewData: Observable<any>) {
