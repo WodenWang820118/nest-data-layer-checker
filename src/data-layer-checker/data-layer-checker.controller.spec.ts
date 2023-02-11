@@ -1,20 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataLayerCheckerController } from './data-layer-checker.controller';
-import { AirtableController } from '../airtable/airtable.controller';
 import { AirtableModule } from '../airtable/airtable.module';
 import { PuppeteerModule } from '../puppeteer/puppeteer.module';
-import { of, Observable } from 'rxjs';
 import { DataLayerCheckerService } from './data-layer-checker.service';
 import { mockDataLayerCheckerService } from './data-layer-checker.service.spec';
+import { AirtableService } from '../airtable/airtable.service';
+import { mockAirtableService } from '../airtable/airtable.service.spec';
 
 const baseId = 'app123';
 const tableId = 'table123';
-const viewId = 'view123';
 const token = 'token123';
 
 describe('DataLayerCheckerController', () => {
   let controller: DataLayerCheckerController;
-  let airtableController: AirtableController;
+  let airtableService: AirtableService;
   let service: DataLayerCheckerService;
 
   beforeEach(async () => {
@@ -23,10 +22,8 @@ describe('DataLayerCheckerController', () => {
       controllers: [DataLayerCheckerController],
       providers: [
         {
-          provide: AirtableController,
-          useValue: {
-            getView: jest.fn().mockReturnValue(of([])),
-          },
+          provide: AirtableService,
+          useValue: mockAirtableService,
         },
         {
           provide: DataLayerCheckerService,
@@ -38,7 +35,8 @@ describe('DataLayerCheckerController', () => {
     controller = module.get<DataLayerCheckerController>(
       DataLayerCheckerController,
     );
-    airtableController = module.get<AirtableController>(AirtableController);
+
+    airtableService = module.get<AirtableService>(AirtableService);
     service = module.get<DataLayerCheckerService>(DataLayerCheckerService);
     jest.clearAllMocks();
   });
@@ -47,31 +45,14 @@ describe('DataLayerCheckerController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('should get airtable view data; handle data checking operation; update view data', () => {
-    it('should get the view data', () => {
+  describe('should get airtable records; handle data checking operation; update multiple records in batch of 10', () => {
+    it('should examinationResults', () => {
       // arrange
       // act
-      controller.checkCodeSpecsAndUpdateView(baseId, tableId, viewId, token);
+      controller.checkCodeSpecsAndUpdateRecords(baseId, tableId, token);
       // assert
-      expect(
-        airtableController.getView(baseId, tableId, viewId, token),
-      ).toBeInstanceOf(Observable);
-    });
-
-    it('should constructSpecsPipe', () => {
-      // arrange
-      // act
-      controller.checkCodeSpecsAndUpdateView(baseId, tableId, viewId, token);
-      // assert
-      expect(service.constructSpecsPipe).toHaveBeenCalled();
-    });
-
-    it('should updateExaminationResults', () => {
-      // arrange
-      // act
-      controller.checkCodeSpecsAndUpdateView(baseId, tableId, viewId, token);
-      // assert
-      expect(service.updateExaminationResults).toHaveBeenCalled();
+      expect(service.checkCodeSpecsAndUpdateRecords).toHaveBeenCalled();
+      expect(service.checkCodeSpecsAndUpdateRecords).toBeCalledTimes(1);
     });
   });
 });

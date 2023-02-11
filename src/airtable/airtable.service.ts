@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
+import { from, catchError, of } from 'rxjs';
 
 @Injectable()
 export class AirtableService {
@@ -43,91 +44,49 @@ export class AirtableService {
   }
 
   /**
-   * patchAirtable updates one or multiple records in a table.
+   * Updates one or multiple records in a table.
    *
-   * @param promises An array of objects containing the id, field and value of the record(s) to update.
    * @param baseId The id of the base.
    * @param tableId The id of the table.
-   * @param viewId The id of the view.
+   * @param records An array of objects containing the id, field and value of the record(s) to update.
    * @param token The API key for the Airtable API.
    *
-   * @returns void
+   * @returns An Observable of the HTTP response from the Airtable API.
    */
-  patchAirtable(
-    promises: Array<any>,
+  updateRecords(
     baseId: string,
     tableId: string,
-    viewId: string,
+    records: Array<any>,
     token: string,
   ) {
-    console.log('patching airtable...');
-    // patch one record
-    // TODO: patch multiple records
-    console.log(promises[0]);
-    const id: string = promises[0].id;
-    const field: string = promises[0].field;
-    const value: string = promises[0].value.toString();
-
-    const url = `https://api.airtable.com/v0/${baseId}/${tableId}/${id}`;
-    console.log(url);
-    const options = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        records: [
-          {
-            id: id,
-            fields: {
-              [field]: value,
-            },
-          },
-        ],
-      }),
-    };
-    this.getView(baseId, tableId, viewId, token).subscribe(res => {
-      console.log('checking field exist...');
-      console.log(res.data.records.map(record => record.fields));
-      const fields = res.data.records.map(record => record.fields);
-      if (Object.keys(fields).includes(field)) {
-        console.log('field exist, patching...');
-        this.http.patch(url, options).subscribe(res => {
-          console.log(res);
-        });
-      } else {
-        console.log('field not exist, creating...');
-        this.createField(baseId, tableId, field, token);
-      }
+    // Build the URL for the API request.
+    const url = `https://api.airtable.com/v0/${baseId}/${tableId}`;
+    const codeSpecMatch = records.map(record => {
+      return {
+        id: record.id,
+        fields: {
+          'Code Spec Match': record.fields['Code Spec Match'],
+        },
+      };
     });
-  }
 
-  /**
-   * createField creates a new field in a table.
-   *
-   * @param baseId The id of the base.
-   * @param tableId The id of the table.
-   * @param field The name of the field to create.
-   * @param token The API key for the Airtable API.
-   *
-   * @returns void
-   */
-  createField(baseId: string, tableId: string, field: string, token: string) {
-    console.log('creating field...');
-    const url = `https://api.airtable.com/v0/meta/bases/${baseId}/tables/${tableId}/fields`;
+    // Build the headers for the API request.
     const headers = {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
+
+    // Build the request body.
     const body = JSON.stringify({
-      fields: {
-        name: field,
-        type: 'singleLineText',
-      },
+      records: codeSpecMatch,
+      typecast: true,
     });
 
-    this.http.post(url, body, { headers }).subscribe(res => {
-      console.log(res);
-    });
+    // Make the API request and return the result as an observable.
+    return from(
+      this.http
+        .patch(url, body, { headers })
+        .pipe(catchError(error => of(error))),
+    );
   }
 }
