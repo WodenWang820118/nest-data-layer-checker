@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AirtableController } from './airtable.controller';
 import { AirtableService } from './airtable.service';
-import { mockAirtableService, token, fields } from './airtable.service.spec';
+import { mockAirtableService, token } from './airtable.service.spec';
 import { Observable } from 'rxjs';
 
 const baseId = 'app123';

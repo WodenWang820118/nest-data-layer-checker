@@ -1,16 +1,8 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Query,
-  Injectable,
-  Global,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query, Injectable } from '@nestjs/common';
 import { AirtableService } from './airtable.service';
 
 @Controller('airtable')
 @Injectable()
-@Global()
 export class AirtableController {
   constructor(private readonly service: AirtableService) {}
 

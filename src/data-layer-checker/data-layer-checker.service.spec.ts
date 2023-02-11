@@ -1,19 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataLayerCheckerService } from './data-layer-checker.service';
-import { of, Observable } from 'rxjs';
+import { of } from 'rxjs';
+import { AirtableService } from '../airtable/airtable.service';
+import { mockAirtableService } from '../airtable/airtable.service.spec';
 
 export const mockDataLayerCheckerService = {
   constructSpecsPipe: jest.fn(),
-  updateExaminationResults: jest
+  examinationResults: jest
     .fn()
-    .mockImplementation(() => mockDataLayerCheckerService.patchAirtable()),
+    .mockImplementation(() => mockDataLayerCheckerService.updateRecords()),
   examineDataAttributes: jest.fn().mockReturnValue(false),
   examineDataLayer: jest.fn().mockReturnValue(false),
-  patchAirtable: jest.fn(),
+  updateRecords: jest.fn(),
+  checkCodeSpecsAndUpdateRecords: jest.fn(),
 };
 
 describe('DataLayerCheckerService', () => {
   let service: DataLayerCheckerService;
+  let airtableService: AirtableService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -22,54 +26,29 @@ describe('DataLayerCheckerService', () => {
           provide: DataLayerCheckerService,
           useValue: mockDataLayerCheckerService,
         },
+        {
+          provide: AirtableService,
+          useValue: mockAirtableService,
+        },
       ],
     }).compile();
 
     service = module.get<DataLayerCheckerService>(DataLayerCheckerService);
+    airtableService = module.get<AirtableService>(AirtableService);
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  it('should constructSpecsPipe', () => {
+  it('should examinationResults', () => {
     // arrange
-    const viewData = {};
+    const records = of([]);
     // act
-    service.constructSpecsPipe(of(viewData));
+    service.examinationResults(records);
     // assert
-    expect(mockDataLayerCheckerService.constructSpecsPipe).toHaveBeenCalled();
-  });
-
-  it('should updateExaminationResults', () => {
-    // arrange
-    const viewDataPipe: Observable<{ id: string; fields: any }[]> = of([
-      {
-        id: 'rec1',
-        fields: {
-          'Code Specs': 'window.dataLayer',
-          URL: 'https://www.google.com',
-        },
-      },
-    ]);
-    const baseId = '';
-    const tableId = '';
-    const viewId = '';
-    const token = '';
-    // act
-    service.updateExaminationResults(
-      viewDataPipe,
-      baseId,
-      tableId,
-      viewId,
-      token,
-    );
-    // assert
-    expect(mockDataLayerCheckerService.constructSpecsPipe).toHaveBeenCalled();
-    expect(
-      mockDataLayerCheckerService.updateExaminationResults,
-    ).toHaveBeenCalled();
-    expect(mockDataLayerCheckerService.patchAirtable).toHaveBeenCalled();
+    expect(mockDataLayerCheckerService.examinationResults).toHaveBeenCalled();
+    expect(mockDataLayerCheckerService.updateRecords).toHaveBeenCalled();
   });
 
   it('should examine data attributes', () => {
@@ -96,5 +75,32 @@ describe('DataLayerCheckerService', () => {
     service.examineDataLayer(codeSpecs, actualDataLayer);
     // assert
     expect(service.examineDataLayer(codeSpecs, actualDataLayer)).toBe(false);
+  });
+
+  describe('should update records', () => {
+    // arrange
+    const baseId = '';
+    const tableId = '';
+    const token = '';
+    // act
+    it('should get records first', () => {
+      service.checkCodeSpecsAndUpdateRecords(baseId, tableId, token);
+      // assert
+      expect(
+        mockDataLayerCheckerService.checkCodeSpecsAndUpdateRecords,
+      ).toHaveBeenCalled();
+    });
+
+    it('should examineResults next', () => {
+      service.checkCodeSpecsAndUpdateRecords(baseId, tableId, token);
+      // assert
+      expect(service.examinationResults).toHaveBeenCalled();
+    });
+
+    it('should update records', () => {
+      service.checkCodeSpecsAndUpdateRecords(baseId, tableId, token);
+      // assert
+      expect(airtableService.updateRecords).toHaveBeenCalled();
+    });
   });
 });
