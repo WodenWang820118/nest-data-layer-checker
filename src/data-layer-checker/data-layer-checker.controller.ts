@@ -12,11 +12,13 @@ export class DataLayerCheckerController {
   checkCodeSpecsAndUpdateRecords(
     @Param('baseId') baseId: string,
     @Param('tableId') tableId: string,
+    @Query('fieldName') fieldName: string,
     @Query('token') token: string,
   ) {
     this.dataLayerCheckerService.checkCodeSpecsAndUpdateRecords(
       baseId,
       tableId,
+      fieldName,
       token,
     );
   }

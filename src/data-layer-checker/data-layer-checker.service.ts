@@ -75,12 +75,14 @@ export class DataLayerCheckerService {
    * checkCodeSpecsAndUpdateRecords
    * @param {string} baseId - the base ID for the Airtable API
    * @param {string} tableId - the table ID for the Airtable API
+   * @param {string} fieldName - the field name to update {Code Spec Match
    * @param {string} token - the API token for the Airtable API
    * @returns void
    */
   checkCodeSpecsAndUpdateRecords(
     baseId: string,
     tableId: string,
+    fieldName: string,
     token: string,
   ) {
     const records: Observable<any> = this.airtableService.getRecords(
@@ -110,7 +112,7 @@ export class DataLayerCheckerService {
           // Update the records in batches
           for (const batch of batches) {
             this.airtableService
-              .updateRecords(baseId, tableId, batch, token)
+              .updateCodeSpecRecords(baseId, tableId, batch, fieldName, token)
               .subscribe(res => {
                 console.log('res: ', res.status);
               });

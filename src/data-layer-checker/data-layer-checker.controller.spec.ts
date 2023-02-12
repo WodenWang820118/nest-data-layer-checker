@@ -48,8 +48,14 @@ describe('DataLayerCheckerController', () => {
   describe('should get airtable records; handle data checking operation; update multiple records in batch of 10', () => {
     it('should examinationResults', () => {
       // arrange
+      const fieldName = 'Code Spec Match';
       // act
-      controller.checkCodeSpecsAndUpdateRecords(baseId, tableId, token);
+      controller.checkCodeSpecsAndUpdateRecords(
+        baseId,
+        tableId,
+        fieldName,
+        token,
+      );
       // assert
       expect(service.checkCodeSpecsAndUpdateRecords).toHaveBeenCalled();
       expect(service.checkCodeSpecsAndUpdateRecords).toBeCalledTimes(1);
