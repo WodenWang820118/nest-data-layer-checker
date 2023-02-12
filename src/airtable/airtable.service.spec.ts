@@ -5,7 +5,7 @@ import { Observable } from 'rxjs';
 export const mockAirtableService = {
   getRecords: jest.fn().mockReturnValue(new Observable()),
   getView: jest.fn().mockReturnValue(new Observable()),
-  updateRecords: jest.fn().mockReturnValue(new Observable()),
+  updateCodeSpecRecords: jest.fn().mockReturnValue(new Observable()),
   createField: jest.fn().mockReturnValue(new Observable()),
 };
 
@@ -51,13 +51,19 @@ describe('AirtableService', () => {
     expect(records).toBeDefined();
   });
 
-  it('should patch (update) the view and return observable', () => {
+  it('should patch (update) the code spec match records and return observable', () => {
     // arrange
-    const recordId = 'record123';
+    const fieldName = 'Code Spec Match';
     // actual
-    const response = service.updateRecords(baseId, tableId, [], token);
+    const response = service.updateCodeSpecRecords(
+      baseId,
+      tableId,
+      [],
+      fieldName,
+      token,
+    );
     // assert
-    expect(mockAirtableService.updateRecords).toHaveBeenCalledWith(
+    expect(mockAirtableService.updateCodeSpecRecords).toHaveBeenCalledWith(
       baseId,
       tableId,
       [],
