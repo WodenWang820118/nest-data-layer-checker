@@ -6,6 +6,7 @@ import { DataLayerCheckerService } from './data-layer-checker.service';
 import { mockDataLayerCheckerService } from './data-layer-checker.service.spec';
 import { AirtableService } from '../airtable/airtable.service';
 import { mockAirtableService } from '../airtable/airtable.service.spec';
+import { GtmOperatorModule } from '../gtm-operator/gtm-operator.module';
 
 const baseId = 'app123';
 const tableId = 'table123';
@@ -18,7 +19,7 @@ describe('DataLayerCheckerController', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [AirtableModule, PuppeteerModule],
+      imports: [AirtableModule, PuppeteerModule, GtmOperatorModule],
       controllers: [DataLayerCheckerController],
       providers: [
         {
@@ -59,6 +60,17 @@ describe('DataLayerCheckerController', () => {
       // assert
       expect(service.checkCodeSpecsAndUpdateRecords).toHaveBeenCalled();
       expect(service.checkCodeSpecsAndUpdateRecords).toBeCalledTimes(1);
+    });
+
+    it('should checkCodeSpecsViaGtm', () => {
+      // arrange
+      const gtmUrl = 'https://www.google.com';
+      const title = 'test';
+      // act
+      controller.checkCodeSpecsViaGtm(gtmUrl, title);
+      // assert
+      expect(service.checkCodeSpecsViaGtm).toHaveBeenCalled();
+      expect(service.checkCodeSpecsViaGtm).toBeCalledTimes(1);
     });
   });
 });

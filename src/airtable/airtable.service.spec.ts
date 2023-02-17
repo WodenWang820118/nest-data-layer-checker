@@ -67,6 +67,7 @@ describe('AirtableService', () => {
       baseId,
       tableId,
       [],
+      fieldName,
       token,
     );
     expect(response).toBeInstanceOf(Observable);

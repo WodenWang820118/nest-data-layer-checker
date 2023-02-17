@@ -2,41 +2,72 @@ import { Observable, map, tap } from 'rxjs';
 import { Injectable } from '@nestjs/common';
 import { PuppeteerService } from '../puppeteer/puppeteer.service';
 import { AirtableService } from '../airtable/airtable.service';
+import { GtmOperatorService } from '../gtm-operator/gtm-operator.service';
+import { ExtractOperation } from '../interfaces/getOperation.interface';
 
 /**
  * DataLayerCheckerService
  * A service class to check the data layer and update records with the examination results.
  */
 @Injectable()
-export class DataLayerCheckerService {
+export class DataLayerCheckerService implements ExtractOperation {
   constructor(
     private readonly puppeteerService: PuppeteerService,
     private readonly airtableService: AirtableService,
+    private readonly gtmOperatorService: GtmOperatorService,
   ) {}
 
-  /**
-   * examination results
-   * @param {Observable<any[]>} records - an Observable of records to be examined
-   * @returns the updated records with the examination results.
-   */
-  examinationResults(records: Observable<any[]>) {
+  // TODO: refactor this method to fetch the records from the AirtableService
+  getOperationJson(title: string) {
+    return this.puppeteerService.getOperationJson(title);
+  }
+
+  examineResults(records: Observable<any[]>, fieldName: string) {
     return records.pipe(
       map(async records => {
         for (const record of records) {
-          if (!record.url || !record.codeSpecs) {
-            record.fields['Code Spec Match'] = false.toString();
-          } else if (record.codeSpecs.startsWith('window')) {
-            const actualDataLayer =
-              await this.puppeteerService.initGetDataLayerOperation(record.url);
-            const result = this.examineDataLayer(
-              record.codeSpecs,
-              actualDataLayer,
-            );
-            record.fields['Code Spec Match'] = result.toString();
-          } else {
-            record.fields['Code Spec Match'] = (
-              this.examineDataAttributes(record) || false
-            ).toString();
+          // two cases: 1. operation 2. url
+          if (
+            !record.fields['Recording'] &&
+            !record.fields['Code Specs'] &&
+            !record.fields['URL']
+          ) {
+            record.fields[`${fieldName}`] = false.toString();
+          } else if (record.fields['Recording']) {
+            console.log('using recording');
+            console.log('recording', record.fields['Recording']);
+            try {
+              const request = JSON.parse(record.fields['Recording']);
+              const actualDataLayer =
+                await this.puppeteerService.performActionAndGetDataLayer(
+                  request,
+                );
+              const result = this.examineSpecs(
+                record.fields['Code Specs'],
+                actualDataLayer,
+              );
+              record.fields[`${fieldName}`] = result.toString();
+            } catch (error) {
+              console.log('error', error);
+              record.fields[`${fieldName}`] = false.toString();
+            }
+          } else if (record.fields['URL']) {
+            console.log('using url');
+            console.log('url', record.fields['URL']);
+            try {
+              const actualDataLayer =
+                await this.puppeteerService.initGetDataLayerOperation(
+                  record.fields['URL'],
+                );
+              const result = this.examineSpecs(
+                record.fields['Code Specs'],
+                actualDataLayer,
+              );
+              record.fields[`${fieldName}`] = result.toString();
+            } catch (error) {
+              console.log('error', error);
+              record.fields[`${fieldName}`] = false.toString();
+            }
           }
         }
         return records;
@@ -44,12 +75,25 @@ export class DataLayerCheckerService {
     );
   }
 
-  /**
-   * examineDataAttributes
-   * @param {Object} testCase - a test case object with properties "url" and "codeSpecs"
-   * @returns the examination result of the data attributes.
-   */
-  examineDataAttributes(testCase: { url: string; codeSpecs: string }) {
+  examineSpecs(specs: string, actualDataLayer: any[]) {
+    if (specs.includes('dataLayer')) {
+      return this.examineDataLayer(specs, actualDataLayer);
+    } else if (specs.includes('dataAttributes')) {
+      return this.examineDataAttributes(specs, actualDataLayer);
+    }
+  }
+
+  // async getActualDataLayer(request: string) {
+  //   try {
+  //     JSON.parse(request);
+  //     return await this.puppeteerService.performActionAndGetDataLayer(request);
+  //   } catch (e) {
+  //     return await this.puppeteerService.initGetDataLayerOperation(request);
+  //   }
+  // }
+
+  examineDataAttributes(dataLayerSpec: string, actualDataLayer: Array<any>) {
+    // TODO: Implement this function
     return false;
   }
 
@@ -60,11 +104,15 @@ export class DataLayerCheckerService {
    * @returns the examination result of the data layer
    */
   examineDataLayer(dataLayerSpec: string, actualDataLayer: Array<any>) {
+    console.log('actualDataLayer', actualDataLayer);
     let parsedSpecs = dataLayerSpec
       .replace(/\$/g, '')
       .split('(')[1]
       .split(')')[0];
     parsedSpecs = JSON.parse(parsedSpecs);
+    // TODO: implement the logic to check the data layer
+    // including the nested objects
+    // FIXME: bugs in the logic
     const specsKeys = Object.keys(parsedSpecs);
     const actualDataKeys = Object.keys(actualDataLayer);
     const hasPassed = specsKeys.every(key => actualDataKeys.includes(key));
@@ -90,12 +138,13 @@ export class DataLayerCheckerService {
       tableId,
       token,
     );
-    const examineResults = this.examinationResults(
+    const examineResults = this.examineResults(
       records.pipe(
         map(
           (response: { data: { records: object[] } }) => response.data.records,
         ),
       ),
+      fieldName,
     );
     examineResults
       .pipe(
@@ -126,5 +175,13 @@ export class DataLayerCheckerService {
     return Array.from({ length: Math.ceil(array.length / chunkSize) }, (_, i) =>
       array.slice(i * chunkSize, i * chunkSize + chunkSize),
     );
+  }
+
+  async checkCodeSpecsViaGtm(gtmUrl: string, title: string) {
+    await this.gtmOperatorService.goToPageViaGtm(gtmUrl, '', 'false');
+    const page = await this.gtmOperatorService.locateTestingPage();
+    // TODO: should grab operation data from Airtable
+    const operation = this.getOperationJson(title);
+    await this.puppeteerService.performOperationViaGtm(page, operation);
   }
 }
