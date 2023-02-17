@@ -48,6 +48,13 @@ export const mockPuppeteerService = {
     return mockPuppeteerService.getDataLayer();
   }),
   getGcs: jest.fn().mockReturnValue(['111']),
+  detectGtm: jest.fn().mockImplementation(async () => {
+    await mockPuppeteerService.initPuppeteerService();
+    const result = await mockPuppeteerService.getInstalledGtms();
+    await mockPuppeteerService.closePage();
+    return result;
+  }),
+  performOperationViaGtm: jest.fn(),
 };
 
 describe('PuppeteerService', () => {
@@ -176,6 +183,30 @@ describe('PuppeteerService', () => {
       const dataLayer = await service.initGetDataLayerOperation(url);
       // assert
       expect(dataLayer).toBeDefined();
+    });
+  });
+
+  describe('should detect gtm ids', () => {
+    // arrange
+    const url = 'https://www.104.com.tw/jobs/main/';
+    // assert
+    it('should initPupeeteerService', async () => {
+      await service.detectGtm(url);
+      expect(service.initPuppeteerService).toHaveBeenCalled();
+      expect(service.initPuppeteerService).toHaveBeenCalledTimes(1);
+    });
+    it('should getInstalledGtms', async () => {
+      await service.detectGtm(url);
+      expect(service.getInstalledGtms).toHaveBeenCalled();
+      expect(service.getInstalledGtms).toHaveBeenCalledTimes(1);
+    });
+    it('should closePage', async () => {
+      await service.detectGtm(url);
+      expect(service.closePage).toHaveBeenCalled();
+    });
+    it('should return GTM ids', async () => {
+      const actual = await service.detectGtm(url);
+      expect(actual.length).toBeGreaterThan(0);
     });
   });
 });

@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { OPERATIONS, USER_AGENT } from '../configs/puppeteer.config';
+import { ExtractOperation } from '../interfaces/getOperation.interface';
 @Injectable()
-export class PuppeteerService {
+export class PuppeteerService implements ExtractOperation {
   private browser: Browser;
   private page: Page;
 
@@ -122,17 +123,41 @@ export class PuppeteerService {
    * @returns A promise that resolves when all steps have been performed.
    */
   async performOperation(operation: any) {
-    if (operation) {
-      for (let i = 1; i < operation.steps.length; i++) {
-        const step = operation.steps[i];
-        if (step.type === 'navigate') {
-          await this.goToPage(step.url);
-        }
-        if (step.type === 'click') {
-          step.selectors.length == 2
-            ? await this.clickElement(this.getPage(), step.selectors[1][0])
-            : await this.clickElement(this.getPage(), step.selectors[0][0]);
-        }
+    // TODO: step.type could be Enum; there are more step.type
+    if (!operation) return;
+    for (let i = 1; i < operation.steps.length; i++) {
+      const step = operation.steps[i];
+      if (step.type === 'navigate') {
+        await this.goToPage(step.url);
+      }
+      if (step.type === 'click') {
+        step.selectors.length == 2
+          ? await this.clickElement(this.getPage(), step.selectors[1][0])
+          : await this.clickElement(this.getPage(), step.selectors[0][0]);
+      }
+    }
+  }
+
+  async performActionAndGetDataLayer(operation: any) {
+    // const operation = this.puppeteerService.getOperationJson(name);
+    if (!operation) return;
+    await this.initPuppeteerService(operation.steps[0]);
+    await this.performOperation(operation);
+    const result = await this.getDataLayer();
+    // console.dir('result', result);
+    await this.closePage();
+    return result;
+  }
+
+  async performOperationViaGtm(page: Page, operation: any) {
+    if (!operation) return;
+    // TODO: step.type could be Enum; there are more step.type
+    for (let i = 1; i < operation.steps.length; i++) {
+      const step = operation.steps[i];
+      if (step.type === 'click') {
+        step.selectors.length == 2
+          ? await this.clickElement(page, step.selectors[1][0])
+          : await this.clickElement(page, step.selectors[0][0]);
       }
     }
   }
@@ -221,5 +246,13 @@ export class PuppeteerService {
     // stripe the gcs= from the request
     if (!requests) return [];
     return requests.map(request => request.split('gcs=')[1].split('&')[0]);
+  }
+
+  async detectGtm(url: string) {
+    await this.initPuppeteerService();
+    const result = await this.getInstalledGtms(url);
+    // console.dir('result', result);
+    await this.closePage();
+    return result;
   }
 }
