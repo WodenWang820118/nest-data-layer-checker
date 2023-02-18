@@ -18,7 +18,7 @@ export class GtmOperatorController {
     @Query('args') args: string = '--incognito',
     @Query('headless') headless = 'false',
   ) {
-    this.gtmOperatorService.observeAndKeepGcsAnomaliesViaGtm(
+    return this.gtmOperatorService.observeAndKeepGcsAnomaliesViaGtm(
       gtmUrl,
       expectValue,
       loops,
