@@ -117,18 +117,47 @@ export class GtmOperatorService {
     args?: string,
     headless?: string,
   ) {
+    const report = [];
+    let anomalyCount = 0;
     for (let i = 0; i < loops; i++) {
       const gcs = await this.observeGcsViaGtm(gtmUrl, args, headless);
-      console.log(gcs);
+      // console.log(gcs);
       if (!gcs.includes(expectValue)) {
         console.log('GCS anomaly detected!');
         console.log(gcs);
-        return;
+        anomalyCount++;
+        report.push({
+          anomalyCount: anomalyCount,
+          gcs: gcs,
+          date: new Date(),
+        });
+        // return;
       } else {
         console.log('No anomalies detected!');
+        report.push({
+          anomalyCount: anomalyCount,
+          gcs: gcs,
+          date: new Date(),
+        });
         await this.testingPage.browser().close();
       }
     }
-    return;
+    return report;
+  }
+
+  async observeAndKeepGcsAnomaliesViaGtmWithReport(
+    gtmUrl: string,
+    expectValue: string,
+    loops: number,
+    args?: string,
+    headless?: string,
+  ) {
+    this.observeAndKeepGcsAnomaliesViaGtm(
+      gtmUrl,
+      expectValue,
+      loops,
+      args,
+      headless,
+    );
   }
 }
