@@ -83,15 +83,6 @@ export class DataLayerCheckerService implements ExtractOperation {
     }
   }
 
-  // async getActualDataLayer(request: string) {
-  //   try {
-  //     JSON.parse(request);
-  //     return await this.puppeteerService.performActionAndGetDataLayer(request);
-  //   } catch (e) {
-  //     return await this.puppeteerService.initGetDataLayerOperation(request);
-  //   }
-  // }
-
   examineDataAttributes(dataLayerSpec: string, actualDataLayer: Array<any>) {
     // TODO: Implement this function
     return false;
@@ -104,19 +95,59 @@ export class DataLayerCheckerService implements ExtractOperation {
    * @returns the examination result of the data layer
    */
   examineDataLayer(dataLayerSpec: string, actualDataLayer: Array<any>) {
-    console.log('actualDataLayer', actualDataLayer);
+    // console.log('actualDataLayer', actualDataLayer);
     let parsedSpecs = dataLayerSpec
       .replace(/\$/g, '')
       .split('(')[1]
       .split(')')[0];
     parsedSpecs = JSON.parse(parsedSpecs);
-    // TODO: implement the logic to check the data layer
-    // including the nested objects
-    // FIXME: bugs in the logic
-    const specsKeys = Object.keys(parsedSpecs);
-    const actualDataKeys = Object.keys(actualDataLayer);
-    const hasPassed = specsKeys.every(key => actualDataKeys.includes(key));
+    console.log('parsedSpecs', parsedSpecs);
+    const hasPassed = this.validateDataLayerWithSpecs(
+      parsedSpecs,
+      actualDataLayer,
+    );
+    console.log('hasPassed', hasPassed);
     return hasPassed;
+  }
+
+  validateDataLayerWithSpecs(specData: string, data: any[]) {
+    const specs = Object.keys(specData);
+    const matchingDataObj = data.find(ele =>
+      Object.keys(ele).some(key => specs.includes(key)),
+    );
+    return matchingDataObj
+      ? this.validateSchema(specData, matchingDataObj)
+      : false;
+  }
+
+  validateSchema(specObj, dataObj) {
+    console.log('specObj', specObj, 'dataObj', dataObj);
+    if (Array.isArray(specObj)) {
+      // only check the first element of the array
+      const nestedSpecs = Object.keys(specObj[0]);
+      const data = Object.keys(dataObj[0]);
+
+      for (let spec of nestedSpecs) {
+        // console.log(spec, data);
+        this.validateSchema(spec, data);
+      }
+    } else if (typeof specObj === 'object') {
+      const nestedSpecs = Object.keys(specObj);
+      const actualKeys = Object.keys(dataObj);
+
+      for (let spec of nestedSpecs) {
+        console.log('spec', spec, 'actualKeys', actualKeys);
+        if (typeof specObj[spec] === 'object' || Array.isArray(specObj[spec])) {
+          this.validateSchema(specObj[spec], dataObj[spec]);
+        }
+        if (!actualKeys.includes(spec)) return false;
+      }
+    } else {
+      // neither array nor object
+      return dataObj === specObj;
+    }
+
+    return true;
   }
 
   /**
