@@ -4,6 +4,7 @@ import { PuppeteerService } from '../puppeteer/puppeteer.service';
 import { AirtableService } from '../airtable/airtable.service';
 import { GtmOperatorService } from '../gtm-operator/gtm-operator.service';
 import { ExtractOperation } from '../interfaces/getOperation.interface';
+import { chunk } from '../utils/util';
 
 /**
  * DataLayerCheckerService
@@ -187,7 +188,7 @@ export class DataLayerCheckerService implements ExtractOperation {
           }
 
           // Split the results into batches of 10
-          const batches = this.chunk(await results, 10);
+          const batches = chunk(await results, 10);
 
           // Update the records in batches
           for (const batch of batches) {
@@ -202,15 +203,14 @@ export class DataLayerCheckerService implements ExtractOperation {
       .subscribe();
   }
 
-  chunk(array: any[], chunkSize: number) {
-    return Array.from({ length: Math.ceil(array.length / chunkSize) }, (_, i) =>
-      array.slice(i * chunkSize, i * chunkSize + chunkSize),
-    );
-  }
-
   async checkCodeSpecsViaGtm(gtmUrl: string, title: string) {
-    await this.gtmOperatorService.goToPageViaGtm(gtmUrl, '', 'false');
-    const page = await this.gtmOperatorService.locateTestingPage();
+    // await this.gtmOperatorService.goToPageViaGtm(gtmUrl, '', 'false');
+    const { browser, page } = await this.gtmOperatorService.goToPageViaGtm(
+      gtmUrl,
+      '',
+      'false',
+    );
+    // const page = await this.gtmOperatorService.locateTestingPage();
     // TODO: should grab operation data from Airtable
     const operation = this.getOperationJson(title);
     await this.puppeteerService.performOperationViaGtm(page, operation);
