@@ -3,21 +3,33 @@ import { DataLayerCheckerService } from './data-layer-checker.service';
 import { of } from 'rxjs';
 import { AirtableService } from '../airtable/airtable.service';
 import { mockAirtableService } from '../airtable/airtable.service.spec';
+import { GtmOperatorService } from '../gtm-operator/gtm-operator.service';
+import { mockGtmOperatorService } from '../gtm-operator/gtm-operator.service.spec';
+import { mockPuppeteerService } from '../puppeteer/puppeteer.service.spec';
 
 export const mockDataLayerCheckerService = {
   constructSpecsPipe: jest.fn(),
-  examinationResults: jest
+  examineResults: jest
     .fn()
     .mockImplementation(() => mockDataLayerCheckerService.updateRecords()),
   examineDataAttributes: jest.fn().mockReturnValue(false),
   examineDataLayer: jest.fn().mockReturnValue(false),
   updateRecords: jest.fn(),
   checkCodeSpecsAndUpdateRecords: jest.fn(),
+  getOperationJson: jest.fn().mockReturnValue({}),
+  checkCodeSpecsViaGtm: jest.fn().mockImplementation(() => {
+    mockGtmOperatorService.goToPageViaGtm();
+    mockDataLayerCheckerService.getOperationJson();
+    mockGtmOperatorService.locateTestingPage();
+    mockPuppeteerService.performOperationViaGtm();
+  }),
+  checkCodeSpecOperationAndUpdateRecords: jest.fn(),
 };
 
 describe('DataLayerCheckerService', () => {
   let service: DataLayerCheckerService;
   let airtableService: AirtableService;
+  let gtmOperatorService: GtmOperatorService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -30,11 +42,16 @@ describe('DataLayerCheckerService', () => {
           provide: AirtableService,
           useValue: mockAirtableService,
         },
+        {
+          provide: GtmOperatorService,
+          useValue: mockGtmOperatorService,
+        },
       ],
     }).compile();
 
     service = module.get<DataLayerCheckerService>(DataLayerCheckerService);
     airtableService = module.get<AirtableService>(AirtableService);
+    gtmOperatorService = module.get<GtmOperatorService>(GtmOperatorService);
   });
 
   it('should be defined', () => {
@@ -44,27 +61,29 @@ describe('DataLayerCheckerService', () => {
   it('should examinationResults', () => {
     // arrange
     const records = of([]);
+    const fieldName = 'CodeSpecs Match';
     // act
-    service.examinationResults(records);
+    service.examineResults(records, fieldName);
     // assert
-    expect(mockDataLayerCheckerService.examinationResults).toHaveBeenCalled();
+    expect(mockDataLayerCheckerService.examineResults).toHaveBeenCalled();
     expect(mockDataLayerCheckerService.updateRecords).toHaveBeenCalled();
   });
 
   it('should examine data attributes', () => {
     // arrange
-    const testCase = {
-      url: '',
-      codeSpecs: 'data-event-id= "join_group"',
-    };
+    const dataLayerSpec = '';
+    const actualDataLayer = [];
     // act
-    service.examineDataAttributes(testCase);
+    const result = service.examineDataAttributes(
+      dataLayerSpec,
+      actualDataLayer,
+    );
     // assert
     expect(
       mockDataLayerCheckerService.examineDataAttributes,
     ).toHaveBeenCalled();
 
-    expect(service.examineDataAttributes(testCase)).toBe(false);
+    expect(result).toBe(false);
   });
 
   it('should examine data layer', () => {
@@ -81,10 +100,11 @@ describe('DataLayerCheckerService', () => {
     // arrange
     const baseId = '';
     const tableId = '';
+    const fieldName = 'CodeSpecs Match';
     const token = '';
     // act
     it('should get records first', () => {
-      service.checkCodeSpecsAndUpdateRecords(baseId, tableId, token);
+      service.checkCodeSpecsAndUpdateRecords(baseId, tableId, fieldName, token);
       // assert
       expect(
         mockDataLayerCheckerService.checkCodeSpecsAndUpdateRecords,
@@ -92,15 +112,41 @@ describe('DataLayerCheckerService', () => {
     });
 
     it('should examineResults next', () => {
-      service.checkCodeSpecsAndUpdateRecords(baseId, tableId, token);
+      service.checkCodeSpecsAndUpdateRecords(baseId, tableId, fieldName, token);
       // assert
-      expect(service.examinationResults).toHaveBeenCalled();
+      expect(service.examineResults).toHaveBeenCalled();
+    });
+  });
+
+  describe('should check code specs via gtm', () => {
+    it('should go to page via gtm', () => {
+      // arrange
+      const gtmUrl = 'https://www.google.com';
+      const title = 'test';
+      // act
+      service.checkCodeSpecsViaGtm(gtmUrl, title);
+      // assert
+      expect(gtmOperatorService.goToPageViaGtm).toHaveBeenCalled();
     });
 
-    it('should update records', () => {
-      service.checkCodeSpecsAndUpdateRecords(baseId, tableId, token);
+    it('should locate the testing page', async () => {
+      // arrange
+      const gtmUrl = 'https://www.google.com';
+      const title = 'test';
+      // act
+      await service.checkCodeSpecsViaGtm(gtmUrl, title);
       // assert
-      expect(airtableService.updateRecords).toHaveBeenCalled();
+      expect(gtmOperatorService.locateTestingPage).toHaveBeenCalled();
+    });
+
+    it('should get operation json', async () => {
+      // arrange
+      const gtmUrl = 'https://www.google.com';
+      const title = 'test';
+      // act
+      await service.checkCodeSpecsViaGtm(gtmUrl, title);
+      // assert
+      expect(service.getOperationJson).toHaveBeenCalled();
     });
   });
 });

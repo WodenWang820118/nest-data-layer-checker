@@ -1,22 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { PuppeteerService } from '../puppeteer/puppeteer.service';
 import { Page } from 'puppeteer';
+import { chunk } from '../utils/util';
 
 /**
- * @class GtmOperatorService
- * Service for interacting with Google Tag Manager and observing the Google Conversion Services
+ * A service for interacting with Google Tag Manager (GTM) via Puppeteer.
  */
 @Injectable()
 export class GtmOperatorService {
   constructor(public puppeteerService: PuppeteerService) {}
-  testingPage: Page;
 
   /**
-   * Go to a page via GTM interface
-   *
-   * @param {string} gtmUrl URL of the Google Tag Manager interface
-   * @param {string} [args] command line arguments to pass to the browser instance
-   * @param {string} [headless] 'true' to run the browser in headless mode, 'false' otherwise
+   * Goes to a GTM URL and returns the browser and page instances.
+   * @param gtmUrl The URL of the GTM interface.
+   * @param args Optional command-line arguments to pass to the browser instance.
+   * @param headless Optional boolean flag indicating whether to run the browser in headless mode.
+   * @returns An object containing the browser and page instances.
    */
   async goToPageViaGtm(gtmUrl: string, args?: string, headless?: string) {
     // 1) Open the GTM interface
@@ -24,13 +23,13 @@ export class GtmOperatorService {
       .split('&')
       .find(element => element.startsWith('url='))
       .split('=')[1];
-    await this.puppeteerService.initPuppeteerService({
+
+    const browser = await this.puppeteerService.initAndReturnBrowser({
       headless: headless.toLowerCase() === 'true' ? true : false || false,
       args: args.split(','),
     });
-    await this.puppeteerService.goToPage(gtmUrl);
-    const broswer = this.puppeteerService.getBrowser();
-    const page = this.puppeteerService.getPage();
+
+    const page = await this.puppeteerService.gotoAndReturnPage(gtmUrl, browser);
 
     // 2) Do not include the debug mode
     await page.$('#include-debug-param').then(el => el?.click());
@@ -39,21 +38,19 @@ export class GtmOperatorService {
     await page.$('#domain-start-button').then(el => el?.click());
 
     // 4) Wait for the page to completely load
-    await broswer.waitForTarget(target => target.url() === websiteUrl);
+    await browser.waitForTarget(target => target.url() === websiteUrl);
+    return { browser, page };
   }
 
   /**
-   * Crawl the current page's responses and extract the ones containing the Google Consent Status parameter
-   *
-   * @returns Array of URLs with the 'gcs' parameter
+   * Crawls the page responses for URLs containing the `gcs` parameter and returns them in an array.
+   * @param page The page to crawl.
+   * @returns An array of URLs containing the `gcs` parameter.
    */
-  async crawlPageResponses() {
+  async crawlPageResponses(page: Page) {
     const responses: string[] = [];
-    // 1) Get the page
-    const page = await this.locateTestingPage();
-    this.testingPage = page; // assign the variable for later use
 
-    // 2) Listen to all responses, push the ones that contain the gcs parameter
+    // 1) Listen to all responses, push the ones that contain the gcs parameter
     page.on('response', async response => {
       try {
         if (response.request().url().includes('gcs=')) {
@@ -65,70 +62,92 @@ export class GtmOperatorService {
     });
 
     await page.waitForResponse(response => response.url().includes('gcs='));
-    // await page.close();
     return responses;
   }
 
   /**
-   * Locate the currently open testing page
-   *
-   * @returns Currently open testing page
+   * Observes the Google Consent States (GCS) via GTM and returns them in an array.
+   * @param gtmUrl The URL of the GTM interface.
+   * @param args Optional command-line arguments to pass to the browser instance.
+   * @param headless Optional boolean flag indicating whether to run the browser in headless mode.
+   * @returns An object containing the browser instance and an array of GCS.
    */
-  async locateTestingPage() {
-    const browser = this.puppeteerService.getBrowser();
+  async observeGcsViaGtm(gtmUrl: string, args?: string, headless?: string) {
+    const { browser, page } = await this.goToPageViaGtm(gtmUrl, args, headless);
     const pages = await browser.pages();
-    return pages[pages.length - 1];
+    const responses = await this.crawlPageResponses(pages[pages.length - 1]);
+    const gcs = this.puppeteerService.getGcs(responses);
+    return { browser, gcs };
   }
 
   /**
-   * @method observeGcsViaGtm
-   * Observe the Google Conversion Services of a page via GTM interface
-   *
-   * @param {string} gtmUrl URL of the Google Tag Manager interface
-   * @param {string} [args] command line arguments to pass to the browser instance
-   * @param {string} [headless] 'true' to run the browser in headless mode, 'false' otherwise
-   *
-   * @returns Array of Google Conversion Services
-   */
-  async observeGcsViaGtm(
-    gtmUrl: string,
-    args?: string,
-    headless?: string,
-  ): Promise<string[]> {
-    await this.goToPageViaGtm(gtmUrl, args, headless);
-    const responses = await this.crawlPageResponses();
-    return this.puppeteerService.getGcs(responses);
-  }
-
-  /**
-   * @method observeAndKeepGcsAnomaliesViaGtm
-   * Observe the Google Conversion Services of a page via GTM interface and keep track of any anomalies
-   *
-   * @param {string} gtmUrl URL of the Google Tag Manager interface
-   * @param {string} expectValue expected Google Conversion Service
-   * @param {number} loops number of times to observe the Google Conversion Services
-   * @param {string} [args] command line arguments to pass to the browser instance
-   * @param {string} [headless] 'true' to run the browser in headless mode, 'false' otherwise
+   * Observes the Google Consent States (GCS) via GTM and keeps track of any anomalies in the GCS.
+   * @param gtmUrl The URL of the GTM interface.
+   * @param expectValue The value to expect in the GCS.
+   * @param loops The number of loops to perform.
+   * @param chunks The number of chunks to divide the loops into for parallel processing.
+   * @param args Optional command-line arguments to pass to the browser instance.
+   * @param headless Optional boolean flag indicating whether to run the browser in headless mode.
+   * @returns An array of reports for any GCS anomalies detected.
    */
   async observeAndKeepGcsAnomaliesViaGtm(
     gtmUrl: string,
     expectValue: string,
     loops: number,
+    chunks: number,
     args?: string,
     headless?: string,
   ) {
-    for (let i = 0; i < loops; i++) {
-      const gcs = await this.observeGcsViaGtm(gtmUrl, args, headless);
-      console.log(gcs);
-      if (!gcs.includes(expectValue)) {
-        console.log('GCS anomaly detected!');
-        console.log(gcs);
-        return;
-      } else {
-        console.log('No anomalies detected!');
-        await this.testingPage.browser().close();
-      }
+    const report = [];
+    let anomalyCount = 0;
+    const chunkedLoops = chunk(
+      Array.from({ length: loops }, (_, i) => i),
+      chunks,
+    );
+
+    for (let i = 0; i < chunkedLoops.length; i++) {
+      const chunkReport = await Promise.all(
+        chunkedLoops[i].map(async () => {
+          const { browser, gcs } = await this.observeGcsViaGtm(
+            gtmUrl,
+            args,
+            headless,
+          );
+          if (!gcs.includes(expectValue)) {
+            console.log(
+              'GCS anomaly detected! ' +
+                'Batch: ' +
+                (i + 1) +
+                ' with instances ' +
+                chunkedLoops[i],
+            );
+            console.log(gcs);
+            anomalyCount++;
+            await browser.close();
+            return {
+              anomalyCount: anomalyCount,
+              gcs: gcs,
+              date: new Date(),
+            };
+          } else {
+            console.log(
+              'GCS anomaly not detected! ' +
+                'Batch: ' +
+                (i + 1) +
+                ' with instances ' +
+                chunkedLoops[i],
+            );
+            await browser.close();
+            return {
+              anomalyCount: anomalyCount,
+              gcs: gcs,
+              date: new Date(),
+            };
+          }
+        }),
+      );
+      report.push(...chunkReport);
     }
-    return;
+    return report;
   }
 }

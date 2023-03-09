@@ -1,15 +1,6 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Query,
-  Injectable,
-  Global,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { PuppeteerService } from './puppeteer.service';
 @Controller('puppeteer')
-@Injectable()
-@Global()
 export class PuppeteerController {
   constructor(private readonly puppeteerService: PuppeteerService) {}
 
@@ -19,27 +10,19 @@ export class PuppeteerController {
     return await this.puppeteerService.initGetDataLayerOperation(url);
   }
 
+  // for demo purposes
   @Get('/action/:name')
-  async performActionAndGetDataLayer(@Param('name') name: string) {
+  async performActionAndGetDataLayer(
+    @Param('name') name: string,
+    @Query('args') args: string = '',
+    @Query('headless') headless: string = 'false',
+  ) {
     console.log('action', name);
-    const operation = this.puppeteerService.getOperationJson(name);
-    if (operation) {
-      await this.puppeteerService.initPuppeteerService(operation.steps[0]);
-      await this.puppeteerService.performOperation(operation);
-      const result = await this.puppeteerService.getDataLayer();
-      // console.dir('result', result);
-      await this.puppeteerService.closePage();
-      return result;
-    }
+    return await this.puppeteerService.performActionAndGetDataLayer(name);
   }
 
   @Get('/detect-gtm')
-  async detectGTM(@Query('url') url: string) {
-    // console.log('detectGTM', url);
-    await this.puppeteerService.initPuppeteerService();
-    const result = await this.puppeteerService.getInstalledGtms(url);
-    // console.dir('result', result);
-    await this.puppeteerService.closePage();
-    return result;
+  async detectGtm(@Query('url') url: string) {
+    return await this.puppeteerService.detectGtm(url);
   }
 }

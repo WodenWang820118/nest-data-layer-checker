@@ -7,5 +7,6 @@ import { PuppeteerModule } from '../puppeteer/puppeteer.module';
   imports: [PuppeteerModule],
   controllers: [GtmOperatorController],
   providers: [GtmOperatorService],
+  exports: [GtmOperatorService],
 })
 export class GtmOperatorModule {}

@@ -1,13 +1,13 @@
-import { Controller, Injectable, Param, Patch, Query } from '@nestjs/common';
+import { Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { DataLayerCheckerService } from './data-layer-checker.service';
 
 @Controller('data-layer-checker')
-@Injectable()
 export class DataLayerCheckerController {
   constructor(
     private readonly dataLayerCheckerService: DataLayerCheckerService,
   ) {}
 
+  // for static URL
   @Patch('/:baseId/:tableId')
   checkCodeSpecsAndUpdateRecords(
     @Param('baseId') baseId: string,
@@ -21,5 +21,13 @@ export class DataLayerCheckerController {
       fieldName,
       token,
     );
+  }
+
+  @Get('/:baseId/:tableId')
+  checkCodeSpecsViaGtm(
+    @Query('gtmUrl') gtmUrl: string,
+    @Query('title') title: string,
+  ) {
+    this.dataLayerCheckerService.checkCodeSpecsViaGtm(gtmUrl, title);
   }
 }
