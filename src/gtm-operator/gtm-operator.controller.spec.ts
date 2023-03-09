@@ -41,6 +41,7 @@ describe('GtmOperatorController', () => {
       const gtmUrl = 'https://tagmanager.google.com';
       const expectValue = 'G111';
       const loops = 3;
+      const chunks = 1;
       const settings = '--incognito';
       const headless = 'false';
       // act
@@ -48,6 +49,7 @@ describe('GtmOperatorController', () => {
         gtmUrl,
         expectValue,
         loops,
+        chunks,
         settings,
         headless,
       );
