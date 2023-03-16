@@ -94,55 +94,57 @@ export class GtmOperatorService {
     gtmUrl: string,
     expectValue: string,
     loops: number,
-    chunks: number,
+    chunkSize: number,
     args?: string,
     headless?: string,
   ) {
     const report = [];
     let anomalyCount = 0;
-    const chunkedLoops = chunk(
-      Array.from({ length: loops }, (_, i) => i),
-      chunks,
-    );
+    const loopArray = Array.from(Array(loops).keys());
+    const chunkedLoops = chunk(loopArray, chunkSize);
 
     for (let i = 0; i < chunkedLoops.length; i++) {
       const chunkReport = await Promise.all(
-        chunkedLoops[i].map(async () => {
-          const { browser, gcs } = await this.observeGcsViaGtm(
-            gtmUrl,
-            args,
-            headless,
-          );
-          if (!gcs.includes(expectValue)) {
-            console.log(
-              'GCS anomaly detected! ' +
-                'Batch: ' +
-                (i + 1) +
-                ' with instances ' +
-                chunkedLoops[i],
+        chunkedLoops[i].map(async index => {
+          try {
+            const { browser, gcs } = await this.observeGcsViaGtm(
+              gtmUrl,
+              args,
+              headless,
             );
-            console.log(gcs);
-            anomalyCount++;
-            await browser.close();
-            return {
-              anomalyCount: anomalyCount,
-              gcs: gcs,
-              date: new Date(),
-            };
-          } else {
-            console.log(
-              'GCS anomaly not detected! ' +
-                'Batch: ' +
-                (i + 1) +
-                ' with instances ' +
-                chunkedLoops[i],
-            );
-            await browser.close();
-            return {
-              anomalyCount: anomalyCount,
-              gcs: gcs,
-              date: new Date(),
-            };
+            if (!gcs.includes(expectValue)) {
+              console.log(
+                'GCS anomaly detected! ' +
+                  'Batch: ' +
+                  (i + 1) +
+                  ' with instances ' +
+                  index,
+              );
+              console.log(gcs);
+              anomalyCount++;
+              await browser.close();
+              return {
+                anomalyCount: anomalyCount,
+                gcs: gcs,
+                date: new Date(),
+              };
+            } else {
+              console.log(
+                'GCS anomaly not detected! ' +
+                  'Batch: ' +
+                  (i + 1) +
+                  ' with instances ' +
+                  index,
+              );
+              await browser.close();
+              return {
+                anomalyCount: anomalyCount,
+                gcs: gcs,
+                date: new Date(),
+              };
+            }
+          } catch (error) {
+            console.log(error);
           }
         }),
       );

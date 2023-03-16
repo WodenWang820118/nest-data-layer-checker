@@ -14,16 +14,16 @@ export class GtmOperatorController {
   async observeAndKeepGcsAnomaliesViaGtm(
     @Query('gtmUrl') gtmUrl: string,
     @Query('expectValue') expectValue: string,
-    @Query('loops') loops = 1,
-    @Query('chunks') chunks = 1,
+    @Query('loops') loops: string = '1',
+    @Query('chunkSize') chunkSize: string = '1',
     @Query('args') args: string = '--incognito',
     @Query('headless') headless = 'false',
   ) {
     return this.gtmOperatorService.observeAndKeepGcsAnomaliesViaGtm(
       gtmUrl,
       expectValue,
-      loops,
-      chunks,
+      Number(loops),
+      Number(chunkSize),
       args,
       headless,
     );
