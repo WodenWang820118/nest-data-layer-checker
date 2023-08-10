@@ -2,6 +2,12 @@ import { Injectable } from '@nestjs/common';
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { OPERATIONS, USER_AGENT } from '../configs/puppeteer.config';
 import { ExtractOperation } from '../interfaces/getOperation.interface';
+
+enum BrowserAction {
+  CLICK = 'click',
+  NAVIGATE = 'navigate',
+}
+
 @Injectable()
 export class PuppeteerService implements ExtractOperation {
   /**
@@ -19,7 +25,7 @@ export class PuppeteerService implements ExtractOperation {
    * @param browser The browser instance to use
    * @returns A Promise resolving to the Page instance
    */
-  async gotoAndReturnPage(url: string, browser: Browser) {
+  async nativateTo(url: string, browser: Browser) {
     const page = await browser.newPage();
     await page.goto(url);
     return page;
@@ -30,9 +36,9 @@ export class PuppeteerService implements ExtractOperation {
    * @param url The URL to navigate to
    * @returns A Promise resolving to an array of data layer objects
    */
-  async initGetDataLayerOperation(url: string) {
+  async fetchDataLayer(url: string) {
     const browser = await this.initAndReturnBrowser();
-    const page = await this.gotoAndReturnPage(url, browser);
+    const page = await this.nativateTo(url, browser);
     const result = await this.getDataLayer(page);
     await browser.close();
     return result;
@@ -46,9 +52,14 @@ export class PuppeteerService implements ExtractOperation {
    */
   async getDataLayer(page: Page, seconds: number = 1000): Promise<any[]> {
     await new Promise(resolve => setTimeout(resolve, seconds));
-    return await page.evaluate(() => {
-      return window.dataLayer;
-    });
+    try {
+      return await page.evaluate(() => {
+        return window.dataLayer;
+      });
+    } catch (error) {
+      console.error(error);
+      throw new Error(error);
+    }
   }
 
   /**
@@ -67,14 +78,13 @@ export class PuppeteerService implements ExtractOperation {
    * @returns A Promise resolving when the operation is complete
    */
   async performOperation(page: Page, operation: any) {
-    // TODO: step.type could be Enum; there are more step.type
     if (!operation) return;
     for (let i = 1; i < operation.steps.length; i++) {
       const step = operation.steps[i];
-      if (step.type === 'navigate') {
+      if (step.type === BrowserAction.NAVIGATE) {
         await page.goto(step.url);
       }
-      if (step.type === 'click') {
+      if (step.type === BrowserAction.CLICK) {
         step.selectors.length == 2
           ? await this.clickElement(page, step.selectors[1][0])
           : await this.clickElement(page, step.selectors[0][0]);
@@ -91,7 +101,7 @@ export class PuppeteerService implements ExtractOperation {
     if (!operation) return;
 
     const browser = await this.initAndReturnBrowser(operation.step[0]);
-    const page = await this.gotoAndReturnPage(operation.steps[1].url, browser);
+    const page = await this.nativateTo(operation.steps[1].url, browser);
 
     await this.performOperation(page, operation);
     const result = await this.getDataLayer(page);
@@ -108,10 +118,9 @@ export class PuppeteerService implements ExtractOperation {
    */
   async performOperationViaGtm(page: Page, operation: any) {
     if (!operation) return;
-    // TODO: step.type could be Enum; there are more step.type
     for (let i = 1; i < operation.steps.length; i++) {
       const step = operation.steps[i];
-      if (step.type === 'click') {
+      if (step.type === BrowserAction.CLICK) {
         step.selectors.length == 2
           ? await this.clickElement(page, step.selectors[1][0])
           : await this.clickElement(page, step.selectors[0][0]);
@@ -125,11 +134,17 @@ export class PuppeteerService implements ExtractOperation {
    * @param selector The selector for the element to click
    * @returns A Promise resolving when the element is clicked
    */
-  async clickElement(page: Page, selector: string) {
+  async clickElement(page: Page, selector: string, timeout: number = 30000) {
     console.log('click element');
-    await page.waitForSelector(selector).then(async () => {
+    try {
+      await page.waitForSelector(selector, { timeout: timeout });
       await page.$eval(selector, el => (el as HTMLButtonElement).click());
-    });
+    } catch (error) {
+      console.error(
+        `Failed to click on element with selector ${selector}. Reason: ${error.message}`,
+      );
+      throw error; // or handle it in a way that makes sense for your application
+    }
   }
 
   /**
@@ -143,18 +158,6 @@ export class PuppeteerService implements ExtractOperation {
       username: credentials.username,
       password: credentials.password,
     });
-  }
-
-  /**
-   * Retrieves the authentication credentials
-   * @returns The authentication credentials object
-   */
-  getAuthCredentials(): any {
-    // TODO: get credentials from provider
-    return {
-      username: 'username',
-      password: 'password',
-    };
   }
 
   /**
@@ -183,23 +186,45 @@ export class PuppeteerService implements ExtractOperation {
    * @param url The URL of the page
    * @returns A Promise resolving to an array of request URLs
    */
-  async getAllRequests(page: Page, url: string) {
+  async getAllRequests(page: Page, url: string): Promise<string[]> {
     const requests: string[] = [];
     await page.setRequestInterception(true);
     await page.setUserAgent(USER_AGENT);
 
-    page.on('request', async request => {
+    // This handler function captures the request URLs
+    const requestHandler = async (request: {
+      isInterceptResolutionHandled: () => any;
+      url: () => string;
+      continue: () => any;
+    }) => {
       try {
         if (request.isInterceptResolutionHandled()) return;
         requests.push(request.url());
         await request.continue();
       } catch (error) {
+        console.error('Error in request interception:', error);
+        // Cleanup before rethrowing
+        page.off('request', requestHandler);
         throw error;
       }
-    });
+    };
 
-    await page.goto(url);
-    await page.reload({ waitUntil: 'networkidle2' });
+    // Attach the handler
+    page.on('request', requestHandler);
+
+    try {
+      await page.goto(url);
+      await page.reload({ waitUntil: 'networkidle2' });
+    } catch (error) {
+      console.error('Error while navigating:', error);
+      throw error;
+    } finally {
+      // Cleanup: Ensure the listener is removed to avoid potential memory leaks
+      page.off('request', requestHandler);
+      // It's a good practice to turn off request interception after done
+      await page.setRequestInterception(false);
+    }
+
     return requests;
   }
 
@@ -220,10 +245,14 @@ export class PuppeteerService implements ExtractOperation {
    */
   async detectGtm(url: string) {
     const browser = await this.initAndReturnBrowser();
-    const page = await this.gotoAndReturnPage(url, browser);
-    const result = await this.getInstalledGtms(page, url);
-    // console.dir('result', result);
-    await browser.close();
-    return result;
+
+    try {
+      const page = await this.nativateTo(url, browser);
+      const result = await this.getInstalledGtms(page, url);
+      // console.dir('result', result);
+      return result;
+    } finally {
+      await browser.close();
+    }
   }
 }
