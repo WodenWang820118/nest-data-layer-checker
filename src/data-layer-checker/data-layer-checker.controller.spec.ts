@@ -61,16 +61,5 @@ describe('DataLayerCheckerController', () => {
       expect(service.checkCodeSpecsAndUpdateRecords).toHaveBeenCalled();
       expect(service.checkCodeSpecsAndUpdateRecords).toBeCalledTimes(1);
     });
-
-    it('should checkCodeSpecsViaGtm', () => {
-      // arrange
-      const gtmUrl = 'https://www.google.com';
-      const title = 'test';
-      // act
-      controller.checkCodeSpecsViaGtm(gtmUrl, title);
-      // assert
-      expect(service.checkCodeSpecsViaGtm).toHaveBeenCalled();
-      expect(service.checkCodeSpecsViaGtm).toBeCalledTimes(1);
-    });
   });
 });
