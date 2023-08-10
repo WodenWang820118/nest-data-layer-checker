@@ -22,12 +22,4 @@ export class DataLayerCheckerController {
       token,
     );
   }
-
-  @Get('/:baseId/:tableId')
-  checkCodeSpecsViaGtm(
-    @Query('gtmUrl') gtmUrl: string,
-    @Query('title') title: string,
-  ) {
-    this.dataLayerCheckerService.checkCodeSpecsViaGtm(gtmUrl, title);
-  }
 }
