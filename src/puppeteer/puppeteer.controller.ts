@@ -7,7 +7,7 @@ export class PuppeteerController {
   @Get('/data-layer')
   async getDataLayer(@Query('url') url: string) {
     console.log('getDataLayer', url);
-    return await this.puppeteerService.initGetDataLayerOperation(url);
+    return await this.puppeteerService.fetchDataLayer(url);
   }
 
   // for demo purposes

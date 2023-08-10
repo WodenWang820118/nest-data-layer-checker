@@ -27,10 +27,10 @@ describe('PuppeteerController', () => {
     // actual
     const url = 'https://www.104.com.tw/jobs/main/';
     // assert
-    it('should initGetDataLayerOperation', async () => {
+    it('should fetchDataLayer', async () => {
       const actual = await controller.getDataLayer(url);
-      expect(service.initGetDataLayerOperation).toHaveBeenCalled();
-      expect(service.initGetDataLayerOperation).toHaveBeenCalledTimes(1);
+      expect(service.fetchDataLayer).toHaveBeenCalled();
+      expect(service.fetchDataLayer).toHaveBeenCalledTimes(1);
     });
   });
 
