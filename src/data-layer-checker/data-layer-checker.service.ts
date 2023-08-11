@@ -114,10 +114,13 @@ export class DataLayerCheckerService {
         actualDataLayer =
           await this.puppeteerService.performActionAndGetDataLayer(
             JSON.parse(record.fields['Recording']),
+            '',
+            '',
+            '',
           );
       } else if (record.fields['URL']) {
         // if there is a URL to get dataLayer directly, use the URL to get the data layer
-        actualDataLayer = await this.puppeteerService.initGetDataLayerOperation(
+        actualDataLayer = await this.puppeteerService.fetchDataLayer(
           record.fields['URL'],
         );
       }

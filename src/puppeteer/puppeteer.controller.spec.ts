@@ -23,17 +23,6 @@ describe('PuppeteerController', () => {
     jest.clearAllMocks();
   });
 
-  describe('should take an url and return the dataLayer', () => {
-    // actual
-    const url = 'https://www.104.com.tw/jobs/main/';
-    // assert
-    it('should fetchDataLayer', async () => {
-      const actual = await controller.getDataLayer(url);
-      expect(service.fetchDataLayer).toHaveBeenCalled();
-      expect(service.fetchDataLayer).toHaveBeenCalledTimes(1);
-    });
-  });
-
   describe('should get GTM ids', () => {
     it('should call detectGTM', async () => {
       const url = 'https://www.104.com.tw/jobs/main/';

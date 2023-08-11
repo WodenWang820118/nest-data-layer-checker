@@ -29,7 +29,7 @@ export class GtmOperatorService {
       args: args.split(','),
     });
 
-    const page = await this.puppeteerService.gotoAndReturnPage(gtmUrl, browser);
+    const page = await this.puppeteerService.nativateTo(gtmUrl, browser);
 
     // 2) Do not include the debug mode
     await page.$('#include-debug-param').then(el => el?.click());
