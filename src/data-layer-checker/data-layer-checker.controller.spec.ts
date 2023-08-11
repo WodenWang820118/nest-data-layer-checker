@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataLayerCheckerController } from './data-layer-checker.controller';
 import { AirtableModule } from '../airtable/airtable.module';
-import { PuppeteerModule } from '../puppeteer/puppeteer.module';
+import { PuppeteerModule } from '../web-agent/puppeteer/puppeteer.module';
 import { DataLayerCheckerService } from './data-layer-checker.service';
 import { mockDataLayerCheckerService } from './data-layer-checker.service.spec';
 import { AirtableService } from '../airtable/airtable.service';

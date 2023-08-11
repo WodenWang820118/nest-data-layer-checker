@@ -1,8 +1,8 @@
 import { Observable, map, tap } from 'rxjs';
 import { Injectable } from '@nestjs/common';
-import { PuppeteerService } from '../puppeteer/puppeteer.service';
 import { AirtableService } from '../airtable/airtable.service';
-import { chunk } from '../utils/util';
+import { chunk } from '../utilities/utilities';
+import { WebAgentService } from '../web-agent/web-agent.service';
 
 /**
  * DataLayerCheckerService
@@ -11,8 +11,8 @@ import { chunk } from '../utils/util';
 @Injectable()
 export class DataLayerCheckerService {
   constructor(
-    private readonly puppeteerService: PuppeteerService,
     private readonly airtableService: AirtableService,
+    private readonly webAgentService: WebAgentService,
   ) {}
 
   /**
@@ -111,16 +111,15 @@ export class DataLayerCheckerService {
     try {
       // if there is a recording, use the recording to get the data layer
       if (record.fields['Recording']) {
-        actualDataLayer =
-          await this.puppeteerService.performActionAndGetDataLayer(
-            JSON.parse(record.fields['Recording']),
-            '',
-            '',
-            '',
-          );
+        actualDataLayer = await this.webAgentService.executeAndGetDataLayer(
+          JSON.parse(record.fields['Recording']),
+          '',
+          '',
+          '',
+        );
       } else if (record.fields['URL']) {
         // if there is a URL to get dataLayer directly, use the URL to get the data layer
-        actualDataLayer = await this.puppeteerService.fetchDataLayer(
+        actualDataLayer = await this.webAgentService.fetchDataLayer(
           record.fields['URL'],
         );
       }

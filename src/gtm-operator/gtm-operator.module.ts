@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { GtmOperatorController } from './gtm-operator.controller';
 import { GtmOperatorService } from './gtm-operator.service';
-import { PuppeteerModule } from '../puppeteer/puppeteer.module';
+import { WebAgentModule } from '../web-agent/web-agent.module';
 
 @Module({
-  imports: [PuppeteerModule],
+  imports: [WebAgentModule],
   controllers: [GtmOperatorController],
   providers: [GtmOperatorService],
   exports: [GtmOperatorService],
