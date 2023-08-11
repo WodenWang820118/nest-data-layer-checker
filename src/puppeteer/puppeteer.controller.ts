@@ -4,21 +4,20 @@ import { PuppeteerService } from './puppeteer.service';
 export class PuppeteerController {
   constructor(private readonly puppeteerService: PuppeteerService) {}
 
-  @Get('/data-layer')
-  async getDataLayer(@Query('url') url: string) {
-    console.log('getDataLayer', url);
-    return await this.puppeteerService.fetchDataLayer(url);
-  }
-
   // for demo purposes
   @Get('/action/:name')
   async performActionAndGetDataLayer(
     @Param('name') name: string,
     @Query('args') args: string = '',
     @Query('headless') headless: string = 'false',
+    @Query('path') path?: string,
   ) {
-    console.log('action', name);
-    return await this.puppeteerService.performActionAndGetDataLayer(name);
+    return await this.puppeteerService.performActionAndGetDataLayer(
+      name,
+      args,
+      headless,
+      path,
+    );
   }
 
   @Get('/detect-gtm')
