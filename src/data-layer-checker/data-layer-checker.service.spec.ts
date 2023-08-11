@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DataLayerCheckerService } from './data-layer-checker.service';
 import { AirtableService } from '../airtable/airtable.service';
 import { mockAirtableService } from '../airtable/airtable.service.spec';
-import { PuppeteerService } from '../puppeteer/puppeteer.service';
-import { mockPuppeteerService } from '../puppeteer/puppeteer.service.spec';
+import { PuppeteerService } from '../web-agent/puppeteer/puppeteer.service';
+import { mockPuppeteerService } from '../web-agent/puppeteer/puppeteer.service.spec';
 
 export const mockDataLayerCheckerService = {
   examineResults: jest

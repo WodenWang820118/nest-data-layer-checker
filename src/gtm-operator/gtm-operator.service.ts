@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { PuppeteerService } from '../puppeteer/puppeteer.service';
 import { Page } from 'puppeteer';
-import { chunk } from '../utils/util';
+import { chunk } from '../utilities/utilities';
+import { WebAgentService } from 'src/web-agent/web-agent.service';
 
 /**
  * A service for interacting with Google Tag Manager (GTM) via Puppeteer.
  */
 @Injectable()
 export class GtmOperatorService {
-  constructor(public puppeteerService: PuppeteerService) {}
+  constructor(private webAgentService: WebAgentService) {}
 
   /**
    * Goes to a GTM URL and returns the browser and page instances.
@@ -24,12 +24,16 @@ export class GtmOperatorService {
       .find(element => element.startsWith('url='))
       .split('=')[1];
 
-    const browser = await this.puppeteerService.initAndReturnBrowser({
-      headless: headless.toLowerCase() === 'true' ? true : false || false,
-      args: args.split(','),
-    });
-
-    const page = await this.puppeteerService.nativateTo(gtmUrl, browser);
+    // TODO: use web-agent service
+    // const browser = await this.puppeteerService.initAndReturnBrowser({
+    //   headless: headless.toLowerCase() === 'true' ? true : false || false,
+    //   args: args.split(','),
+    // });
+    const browser = await this.webAgentService.getCurrentBrowser(
+      args,
+      headless,
+    );
+    const page = await this.webAgentService.getGtmTestingPage(gtmUrl, browser);
 
     // 2) Do not include the debug mode
     await page.$('#include-debug-param').then(el => el?.click());
@@ -76,7 +80,7 @@ export class GtmOperatorService {
     const { browser, page } = await this.goToPageViaGtm(gtmUrl, args, headless);
     const pages = await browser.pages();
     const responses = await this.crawlPageResponses(pages[pages.length - 1]);
-    const gcs = this.puppeteerService.getGcs(responses);
+    const gcs = this.webAgentService.getGcs(responses);
     return { browser, gcs };
   }
 
