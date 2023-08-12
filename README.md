@@ -34,6 +34,14 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
+## Development Guides
+
+We're using semantic versioning for this project. Please follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification for commit messages.
+
+```bash
+$ npm run commit
+```
+
 ## Dependencies
 
 ![dependencies](infrastructure/nest-datalayer-DI-structure.png)
