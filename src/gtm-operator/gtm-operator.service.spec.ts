@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GtmOperatorService } from './gtm-operator.service';
-import { mockPuppeteerService } from '../puppeteer/puppeteer.service.spec';
+import { mockPuppeteerService } from '../web-agent/puppeteer/puppeteer.service.spec';
 
 export const mockGtmOperatorService = {
   puppeteerService: mockPuppeteerService,

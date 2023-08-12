@@ -1,28 +1,90 @@
 import { Observable, map, tap } from 'rxjs';
 import { Injectable } from '@nestjs/common';
-import { PuppeteerService } from '../puppeteer/puppeteer.service';
 import { AirtableService } from '../airtable/airtable.service';
-import { GtmOperatorService } from '../gtm-operator/gtm-operator.service';
-import { ExtractOperation } from '../interfaces/getOperation.interface';
-import { chunk } from '../utils/util';
+import { chunk } from '../utilities/utilities';
+import { WebAgentService } from '../web-agent/web-agent.service';
 
 /**
  * DataLayerCheckerService
- * A service class to check the data layer and update records with the examination results.
+ * A service class to check the data layer; update records with the examination results.
  */
 @Injectable()
-export class DataLayerCheckerService implements ExtractOperation {
+export class DataLayerCheckerService {
   constructor(
-    private readonly puppeteerService: PuppeteerService,
     private readonly airtableService: AirtableService,
-    private readonly gtmOperatorService: GtmOperatorService,
+    private readonly webAgentService: WebAgentService,
   ) {}
 
-  // TODO: refactor this method to fetch the records from the AirtableService
-  getOperationJson(title: string) {
-    return this.puppeteerService.getOperationJson(title);
+  /**
+   * Match the dataLayer specs keys with the actual dataLayer keys, and validate the values.
+   * It will return true if the dataLayer matches the specs, otherwise false.
+   * @param {Object} specData - The expected dataLayer specification
+   * @param {Array<Object>} data - The actual dataLayer
+   * @returns boolean
+   */
+  validateDataLayerWithSpecs(specData: object, data: Array<object>): boolean {
+    const specs = Object.keys(specData);
+    const matchingDataObj = data.find(ele =>
+      Object.keys(ele).some(key => specs.includes(key)),
+    );
+
+    return matchingDataObj
+      ? this.validateSchema(specData, matchingDataObj)
+      : false;
   }
 
+  /**
+   * Compare the specs object with the data object, and return true if the data object matches the specs object, otherwise false.
+   * @param {Object} specObj - The expected data specification
+   * @param {Object} dataObj - The actual data
+   * @returns boolean
+   */
+  validateSchema(specObj: any, dataObj: object): boolean {
+    // When both are primitive types (e.g. string, number)
+    if (typeof specObj !== 'object' || specObj === null) {
+      return specObj === dataObj;
+    }
+
+    // Handle the array scenario
+    if (Array.isArray(specObj)) {
+      if (!Array.isArray(dataObj) || specObj.length !== dataObj.length) {
+        return false;
+      }
+      for (let i = 0; i < specObj.length; i++) {
+        if (!this.validateSchema(specObj[i], dataObj[i])) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // Handle the object scenario
+    const specKeys = Object.keys(specObj);
+    const dataKeys = Object.keys(dataObj);
+
+    // Ensure every key in specObj is present in dataObj
+    for (let key of specKeys) {
+      if (!dataKeys.includes(key)) {
+        return false;
+      }
+
+      // Recursively validate nested objects or arrays
+      if (!this.validateSchema(specObj[key], dataObj[key])) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // ---------------------- airtable-related methods ----------------------
+
+  /**
+   * Examine the results with the Airtable records
+   * @param records Airtable records
+   * @param fieldName Airtable field name
+   * @returns Observable<Promise<any[]>> of the examined results
+   */
   examineResults(records: Observable<any[]>, fieldName: string) {
     return records.pipe(
       map(async records => {
@@ -34,41 +96,8 @@ export class DataLayerCheckerService implements ExtractOperation {
             !record.fields['URL']
           ) {
             record.fields[`${fieldName}`] = false.toString();
-          } else if (record.fields['Recording']) {
-            console.log('using recording');
-            console.log('recording', record.fields['Recording']);
-            try {
-              const request = JSON.parse(record.fields['Recording']);
-              const actualDataLayer =
-                await this.puppeteerService.performActionAndGetDataLayer(
-                  request,
-                );
-              const result = this.examineSpecs(
-                record.fields['Code Specs'],
-                actualDataLayer,
-              );
-              record.fields[`${fieldName}`] = result.toString();
-            } catch (error) {
-              console.log('error', error);
-              record.fields[`${fieldName}`] = false.toString();
-            }
-          } else if (record.fields['URL']) {
-            console.log('using url');
-            console.log('url', record.fields['URL']);
-            try {
-              const actualDataLayer =
-                await this.puppeteerService.initGetDataLayerOperation(
-                  record.fields['URL'],
-                );
-              const result = this.examineSpecs(
-                record.fields['Code Specs'],
-                actualDataLayer,
-              );
-              record.fields[`${fieldName}`] = result.toString();
-            } catch (error) {
-              console.log('error', error);
-              record.fields[`${fieldName}`] = false.toString();
-            }
+          } else {
+            await this.handleRecordByType(record, fieldName);
           }
         }
         return records;
@@ -76,83 +105,38 @@ export class DataLayerCheckerService implements ExtractOperation {
     );
   }
 
-  examineSpecs(specs: string, actualDataLayer: any[]) {
-    if (specs.includes('dataLayer')) {
-      return this.examineDataLayer(specs, actualDataLayer);
-    } else if (specs.includes('dataAttributes')) {
-      return this.examineDataAttributes(specs, actualDataLayer);
+  private async handleRecordByType(record: any, fieldName: string) {
+    let actualDataLayer;
+    let result;
+    try {
+      // if there is a recording, use the recording to get the data layer
+      if (record.fields['Recording']) {
+        actualDataLayer = await this.webAgentService.executeAndGetDataLayer(
+          JSON.parse(record.fields['Recording']),
+          '',
+          '',
+          '',
+        );
+      } else if (record.fields['URL']) {
+        // if there is a URL to get dataLayer directly, use the URL to get the data layer
+        actualDataLayer = await this.webAgentService.fetchDataLayer(
+          record.fields['URL'],
+        );
+      }
+      // if there is a code specs, use the code specs to examine the data layer
+      result = this.validateDataLayerWithSpecs(
+        JSON.parse(record.fields['Code Specs']),
+        actualDataLayer,
+      );
+    } catch (error) {
+      console.error('Error processing record:', error);
+      result = false;
     }
-  }
-
-  examineDataAttributes(dataLayerSpec: string, actualDataLayer: Array<any>) {
-    // TODO: Implement this function
-    return false;
+    record.fields[`${fieldName}`] = result.toString();
   }
 
   /**
-   * examineDataLayer
-   * @param {string} dataLayerSpec - the code specifications for the data layer
-   * @param {Array<any>} actualDataLayer - the actual data layer
-   * @returns the examination result of the data layer
-   */
-  examineDataLayer(dataLayerSpec: string, actualDataLayer: Array<any>) {
-    // console.log('actualDataLayer', actualDataLayer);
-    let parsedSpecs = dataLayerSpec
-      .replace(/\$/g, '')
-      .split('(')[1]
-      .split(')')[0];
-    parsedSpecs = JSON.parse(parsedSpecs);
-    console.log('parsedSpecs', parsedSpecs);
-    const hasPassed = this.validateDataLayerWithSpecs(
-      parsedSpecs,
-      actualDataLayer,
-    );
-    console.log('hasPassed', hasPassed);
-    return hasPassed;
-  }
-
-  validateDataLayerWithSpecs(specData: string, data: any[]) {
-    const specs = Object.keys(specData);
-    const matchingDataObj = data.find(ele =>
-      Object.keys(ele).some(key => specs.includes(key)),
-    );
-    return matchingDataObj
-      ? this.validateSchema(specData, matchingDataObj)
-      : false;
-  }
-
-  validateSchema(specObj, dataObj) {
-    console.log('specObj', specObj, 'dataObj', dataObj);
-    if (Array.isArray(specObj)) {
-      // only check the first element of the array
-      const nestedSpecs = Object.keys(specObj[0]);
-      const data = Object.keys(dataObj[0]);
-
-      for (let spec of nestedSpecs) {
-        // console.log(spec, data);
-        this.validateSchema(spec, data);
-      }
-    } else if (typeof specObj === 'object') {
-      const nestedSpecs = Object.keys(specObj);
-      const actualKeys = Object.keys(dataObj);
-
-      for (let spec of nestedSpecs) {
-        console.log('spec', spec, 'actualKeys', actualKeys);
-        if (typeof specObj[spec] === 'object' || Array.isArray(specObj[spec])) {
-          this.validateSchema(specObj[spec], dataObj[spec]);
-        }
-        if (!actualKeys.includes(spec)) return false;
-      }
-    } else {
-      // neither array nor object
-      return dataObj === specObj;
-    }
-
-    return true;
-  }
-
-  /**
-   * checkCodeSpecsAndUpdateRecords
+   * Check the code specs and update the Airtable Records
    * @param {string} baseId - the base ID for the Airtable API
    * @param {string} tableId - the table ID for the Airtable API
    * @param {string} fieldName - the field name to update {Code Spec Match
@@ -201,18 +185,5 @@ export class DataLayerCheckerService implements ExtractOperation {
         }),
       )
       .subscribe();
-  }
-
-  async checkCodeSpecsViaGtm(gtmUrl: string, title: string) {
-    // await this.gtmOperatorService.goToPageViaGtm(gtmUrl, '', 'false');
-    const { browser, page } = await this.gtmOperatorService.goToPageViaGtm(
-      gtmUrl,
-      '',
-      'false',
-    );
-    // const page = await this.gtmOperatorService.locateTestingPage();
-    // TODO: should grab operation data from Airtable
-    const operation = this.getOperationJson(title);
-    await this.puppeteerService.performOperationViaGtm(page, operation);
   }
 }

@@ -1,152 +1,115 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataLayerCheckerService } from './data-layer-checker.service';
-import { of } from 'rxjs';
 import { AirtableService } from '../airtable/airtable.service';
 import { mockAirtableService } from '../airtable/airtable.service.spec';
-import { GtmOperatorService } from '../gtm-operator/gtm-operator.service';
-import { mockGtmOperatorService } from '../gtm-operator/gtm-operator.service.spec';
-import { mockPuppeteerService } from '../puppeteer/puppeteer.service.spec';
+import { PuppeteerService } from '../web-agent/puppeteer/puppeteer.service';
+import { mockPuppeteerService } from '../web-agent/puppeteer/puppeteer.service.spec';
 
 export const mockDataLayerCheckerService = {
-  constructSpecsPipe: jest.fn(),
   examineResults: jest
     .fn()
     .mockImplementation(() => mockDataLayerCheckerService.updateRecords()),
-  examineDataAttributes: jest.fn().mockReturnValue(false),
-  examineDataLayer: jest.fn().mockReturnValue(false),
   updateRecords: jest.fn(),
   checkCodeSpecsAndUpdateRecords: jest.fn(),
-  getOperationJson: jest.fn().mockReturnValue({}),
-  checkCodeSpecsViaGtm: jest.fn().mockImplementation(() => {
-    mockGtmOperatorService.goToPageViaGtm();
-    mockDataLayerCheckerService.getOperationJson();
-    mockGtmOperatorService.locateTestingPage();
-    mockPuppeteerService.performOperationViaGtm();
-  }),
   checkCodeSpecOperationAndUpdateRecords: jest.fn(),
+  validateDataLayerWithSpecs: jest.fn().mockReturnValue(false),
+  validateSchema: jest.fn().mockReturnValue(false),
 };
 
 describe('DataLayerCheckerService', () => {
+  jest.clearAllMocks();
+
   let service: DataLayerCheckerService;
-  let airtableService: AirtableService;
-  let gtmOperatorService: GtmOperatorService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        DataLayerCheckerService,
         {
-          provide: DataLayerCheckerService,
-          useValue: mockDataLayerCheckerService,
+          provide: PuppeteerService,
+          useValue: mockPuppeteerService,
         },
         {
           provide: AirtableService,
           useValue: mockAirtableService,
         },
-        {
-          provide: GtmOperatorService,
-          useValue: mockGtmOperatorService,
-        },
       ],
     }).compile();
 
     service = module.get<DataLayerCheckerService>(DataLayerCheckerService);
-    airtableService = module.get<AirtableService>(AirtableService);
-    gtmOperatorService = module.get<GtmOperatorService>(GtmOperatorService);
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  it('should examinationResults', () => {
-    // arrange
-    const records = of([]);
-    const fieldName = 'CodeSpecs Match';
-    // act
-    service.examineResults(records, fieldName);
-    // assert
-    expect(mockDataLayerCheckerService.examineResults).toHaveBeenCalled();
-    expect(mockDataLayerCheckerService.updateRecords).toHaveBeenCalled();
-  });
+  describe('validateDataLayerWithSpecs', () => {
+    const testCases = [
+      {
+        specData: { key: 'value' },
+        data: [{ key: 'value' }],
+        expected: true,
+        desc: 'matches simple object',
+      },
+      {
+        specData: { key: 'value' },
+        data: [{ key: 'differentValue' }],
+        expected: false,
+        desc: 'non-matching simple object',
+      },
+      // ... Add more cases as needed
+    ];
 
-  it('should examine data attributes', () => {
-    // arrange
-    const dataLayerSpec = '';
-    const actualDataLayer = [];
-    // act
-    const result = service.examineDataAttributes(
-      dataLayerSpec,
-      actualDataLayer,
+    it.each(testCases)(
+      'should return $expected when $desc',
+      ({ specData, data, expected }) => {
+        expect(service.validateDataLayerWithSpecs(specData, data)).toBe(
+          expected,
+        );
+      },
     );
-    // assert
-    expect(
-      mockDataLayerCheckerService.examineDataAttributes,
-    ).toHaveBeenCalled();
 
-    expect(result).toBe(false);
-  });
+    it('should return true if a matching object is found', () => {
+      const specData = { key: 'value' };
+      const data = [{ key: 'value' }, { anotherKey: 'anotherValue' }];
 
-  it('should examine data layer', () => {
-    // arrange
-    const codeSpecs = 'window.dataLayer';
-    const actualDataLayer = [];
-    // act
-    service.examineDataLayer(codeSpecs, actualDataLayer);
-    // assert
-    expect(service.examineDataLayer(codeSpecs, actualDataLayer)).toBe(false);
-  });
-
-  describe('should update records', () => {
-    // arrange
-    const baseId = '';
-    const tableId = '';
-    const fieldName = 'CodeSpecs Match';
-    const token = '';
-    // act
-    it('should get records first', () => {
-      service.checkCodeSpecsAndUpdateRecords(baseId, tableId, fieldName, token);
-      // assert
-      expect(
-        mockDataLayerCheckerService.checkCodeSpecsAndUpdateRecords,
-      ).toHaveBeenCalled();
-    });
-
-    it('should examineResults next', () => {
-      service.checkCodeSpecsAndUpdateRecords(baseId, tableId, fieldName, token);
-      // assert
-      expect(service.examineResults).toHaveBeenCalled();
+      expect(service.validateDataLayerWithSpecs(specData, data)).toBe(true);
     });
   });
 
-  describe('should check code specs via gtm', () => {
-    it('should go to page via gtm', () => {
-      // arrange
-      const gtmUrl = 'https://www.google.com';
-      const title = 'test';
-      // act
-      service.checkCodeSpecsViaGtm(gtmUrl, title);
-      // assert
-      expect(gtmOperatorService.goToPageViaGtm).toHaveBeenCalled();
-    });
-
-    it('should locate the testing page', async () => {
-      // arrange
-      const gtmUrl = 'https://www.google.com';
-      const title = 'test';
-      // act
-      await service.checkCodeSpecsViaGtm(gtmUrl, title);
-      // assert
-      expect(gtmOperatorService.locateTestingPage).toHaveBeenCalled();
-    });
-
-    it('should get operation json', async () => {
-      // arrange
-      const gtmUrl = 'https://www.google.com';
-      const title = 'test';
-      // act
-      await service.checkCodeSpecsViaGtm(gtmUrl, title);
-      // assert
-      expect(service.getOperationJson).toHaveBeenCalled();
-    });
+  describe('validateSchema', () => {
+    const testCases = [
+      {
+        specObj: { key: 'value' },
+        dataObj: { key: 'value' },
+        expected: true,
+        desc: 'matches simple object',
+      },
+      {
+        specObj: { key: 'value' },
+        dataObj: { key: 'differentValue' },
+        expected: false,
+        desc: 'non-matching simple object',
+      },
+      {
+        specObj: { key1: 'value1', key2: { subKey: 'subValue' } },
+        dataObj: { key1: 'value1', key2: { subKey: 'subValue' } },
+        expected: true,
+        desc: 'matches nested object',
+      },
+      {
+        specObj: { key1: 'value1', key2: { subKey: 'subValue' } },
+        dataObj: { key1: 'value1', key2: { subKey: 'wrongSubValue' } },
+        expected: false,
+        desc: 'non-matching nested object',
+      },
+      // ... Add more cases as needed
+    ];
+    test.each(testCases)(
+      'should return $expected when $desc',
+      ({ specObj, dataObj, expected }) => {
+        expect(service.validateSchema(specObj, dataObj)).toBe(expected);
+      },
+    );
   });
 });

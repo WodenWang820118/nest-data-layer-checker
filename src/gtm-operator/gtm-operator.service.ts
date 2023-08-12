@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { PuppeteerService } from '../puppeteer/puppeteer.service';
 import { Page } from 'puppeteer';
-import { chunk } from '../utils/util';
+import { chunk } from '../utilities/utilities';
+import { WebAgentService } from 'src/web-agent/web-agent.service';
 
 /**
  * A service for interacting with Google Tag Manager (GTM) via Puppeteer.
  */
 @Injectable()
 export class GtmOperatorService {
-  constructor(public puppeteerService: PuppeteerService) {}
+  constructor(private webAgentService: WebAgentService) {}
 
   /**
    * Goes to a GTM URL and returns the browser and page instances.
@@ -24,12 +24,16 @@ export class GtmOperatorService {
       .find(element => element.startsWith('url='))
       .split('=')[1];
 
-    const browser = await this.puppeteerService.initAndReturnBrowser({
-      headless: headless.toLowerCase() === 'true' ? true : false || false,
-      args: args.split(','),
-    });
-
-    const page = await this.puppeteerService.gotoAndReturnPage(gtmUrl, browser);
+    // TODO: use web-agent service
+    // const browser = await this.puppeteerService.initAndReturnBrowser({
+    //   headless: headless.toLowerCase() === 'true' ? true : false || false,
+    //   args: args.split(','),
+    // });
+    const browser = await this.webAgentService.getCurrentBrowser(
+      args,
+      headless,
+    );
+    const page = await this.webAgentService.getGtmTestingPage(gtmUrl, browser);
 
     // 2) Do not include the debug mode
     await page.$('#include-debug-param').then(el => el?.click());
@@ -76,7 +80,7 @@ export class GtmOperatorService {
     const { browser, page } = await this.goToPageViaGtm(gtmUrl, args, headless);
     const pages = await browser.pages();
     const responses = await this.crawlPageResponses(pages[pages.length - 1]);
-    const gcs = this.puppeteerService.getGcs(responses);
+    const gcs = this.webAgentService.getGcs(responses);
     return { browser, gcs };
   }
 
@@ -94,55 +98,57 @@ export class GtmOperatorService {
     gtmUrl: string,
     expectValue: string,
     loops: number,
-    chunks: number,
+    chunkSize: number,
     args?: string,
     headless?: string,
   ) {
     const report = [];
     let anomalyCount = 0;
-    const chunkedLoops = chunk(
-      Array.from({ length: loops }, (_, i) => i),
-      chunks,
-    );
+    const loopArray = Array.from(Array(loops).keys());
+    const chunkedLoops = chunk(loopArray, chunkSize);
 
     for (let i = 0; i < chunkedLoops.length; i++) {
       const chunkReport = await Promise.all(
-        chunkedLoops[i].map(async () => {
-          const { browser, gcs } = await this.observeGcsViaGtm(
-            gtmUrl,
-            args,
-            headless,
-          );
-          if (!gcs.includes(expectValue)) {
-            console.log(
-              'GCS anomaly detected! ' +
-                'Batch: ' +
-                (i + 1) +
-                ' with instances ' +
-                chunkedLoops[i],
+        chunkedLoops[i].map(async index => {
+          try {
+            const { browser, gcs } = await this.observeGcsViaGtm(
+              gtmUrl,
+              args,
+              headless,
             );
-            console.log(gcs);
-            anomalyCount++;
-            await browser.close();
-            return {
-              anomalyCount: anomalyCount,
-              gcs: gcs,
-              date: new Date(),
-            };
-          } else {
-            console.log(
-              'GCS anomaly not detected! ' +
-                'Batch: ' +
-                (i + 1) +
-                ' with instances ' +
-                chunkedLoops[i],
-            );
-            await browser.close();
-            return {
-              anomalyCount: anomalyCount,
-              gcs: gcs,
-              date: new Date(),
-            };
+            if (!gcs.includes(expectValue)) {
+              console.log(
+                'GCS anomaly detected! ' +
+                  'Batch: ' +
+                  (i + 1) +
+                  ' with instances ' +
+                  index,
+              );
+              console.log(gcs);
+              anomalyCount++;
+              await browser.close();
+              return {
+                anomalyCount: anomalyCount,
+                gcs: gcs,
+                date: new Date(),
+              };
+            } else {
+              console.log(
+                'GCS anomaly not detected! ' +
+                  'Batch: ' +
+                  (i + 1) +
+                  ' with instances ' +
+                  index,
+              );
+              await browser.close();
+              return {
+                anomalyCount: anomalyCount,
+                gcs: gcs,
+                date: new Date(),
+              };
+            }
+          } catch (error) {
+            console.log(error);
           }
         }),
       );
