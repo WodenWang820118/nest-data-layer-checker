@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/WodenWang820118/nest-data-layer-checker/compare/v1.0.0...v1.0.1) (2023-08-14)
+
+
+### Performance Improvements
+
+* **package.json:** upgrade nestjs and use swc for more framework features and improve performance ([5ac0308](https://github.com/WodenWang820118/nest-data-layer-checker/commit/5ac0308d572d259ac226732cf75e520a4c94ce1d))
+
 # 1.0.0 (2023-08-12)
 
 
