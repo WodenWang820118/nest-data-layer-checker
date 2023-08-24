@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PuppeteerService } from '../puppeteer/puppeteer.service';
 import { Page } from 'puppeteer';
-import { USER_AGENT } from 'src/configs/puppeteer.config';
+import { USER_AGENT } from '../../configs/puppeteer.config';
 
 @Injectable()
 export class AnalysisService {
